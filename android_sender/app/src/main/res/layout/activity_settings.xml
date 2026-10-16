@@ -1,0 +1,360 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#0F172A">
+
+    <!-- Top Action Bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp"
+        android:background="#1E293B">
+
+        <Button
+            android:id="@+id/btn_back"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:text="◀"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:background="#334155" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="⚙️ Cài đặt &amp; Kết nối"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginStart="16dp" />
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Card 1: Wi-Fi IP Banner -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#1E293B"
+                android:padding="16dp"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="🌐 ĐỊA CHỈ IP WI-FI CỦA MÁY"
+                        android:textColor="#38BDF8"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <Button
+                        android:id="@+id/btn_copy_ip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="34dp"
+                        android:background="#0284C7"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp"
+                        android:text="📋 Sao chép IP" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/txt_ip_address"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="#00E676"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="6dp"
+                    android:text="Đang kiểm tra IP..." />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Dùng địa chỉ trên để kết nối không dây qua cổng 5555."
+                    android:textColor="#94A3B8"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Card 2: Quyền & SMS Service -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#1E293B"
+                android:padding="16dp"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="📱 TRẠNG THÁI DỊCH VỤ &amp; QUYỀN HỆ THỐNG"
+                    android:textColor="#F59E0B"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="10dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="12dp">
+
+                    <TextView
+                        android:id="@+id/status_dot"
+                        android:layout_width="12dp"
+                        android:layout_height="12dp"
+                        android:background="#00E676"
+                        android:layout_marginEnd="8dp" />
+
+                    <TextView
+                        android:id="@+id/status"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:text="SMS Service: Đang kiểm tra..." />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/txt_sim_info"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:textColor="#38BDF8"
+                    android:textSize="12sp"
+                    android:text="SIM: Đang kiểm tra..." />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btn_grant"
+                        android:layout_width="0dp"
+                        android:layout_height="38dp"
+                        android:layout_weight="1"
+                        android:background="#334155"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp"
+                        android:text="Cấp quyền" />
+
+                    <Button
+                        android:id="@+id/btn_default_sms"
+                        android:layout_width="0dp"
+                        android:layout_height="38dp"
+                        android:layout_weight="1.2"
+                        android:layout_marginStart="6dp"
+                        android:background="#334155"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp"
+                        android:text="Đặt mặc định" />
+
+                    <Button
+                        android:id="@+id/btn_refresh"
+                        android:layout_width="0dp"
+                        android:layout_height="38dp"
+                        android:layout_weight="0.8"
+                        android:layout_marginStart="6dp"
+                        android:background="#334155"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp"
+                        android:text="Làm mới" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Card 3: Cấu hình kết nối PC (Master LAN / Cloud) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#1E293B"
+                android:padding="16dp"
+                android:layout_marginBottom="24dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="☁️ KẾT NỐI MÁY TÍNH (CLOUD / MASTER LAN)"
+                    android:textColor="#10B981"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:id="@+id/txt_cloud_status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Trạng thái: Chưa cấu hình"
+                    android:textColor="#94A3B8"
+                    android:textSize="12sp"
+                    android:layout_marginBottom="12dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="1. Địa chỉ Máy tính (Master LAN):"
+                    android:textColor="#E2E8F0"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <EditText
+                    android:id="@+id/input_lan_server"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:hint="http://192.168.x.x:8765"
+                    android:textColor="#FFFFFF"
+                    android:textColorHint="#64748B"
+                    android:textSize="13sp"
+                    android:padding="8dp"
+                    android:background="#334155"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="8dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <Button
+                        android:id="@+id/btn_discover"
+                        android:layout_width="0dp"
+                        android:layout_height="38dp"
+                        android:layout_weight="1.2"
+                        android:background="#059669"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:text="🔍 Tự tìm máy tính" />
+
+                    <Button
+                        android:id="@+id/btn_test_conn"
+                        android:layout_width="0dp"
+                        android:layout_height="38dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:background="#475569"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp"
+                        android:text="🧪 Kiểm tra" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/lbl_test_status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="#38BDF8"
+                    android:textSize="12sp"
+                    android:visibility="gone"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="2. Cloud Server WAN (Nếu có):"
+                    android:textColor="#E2E8F0"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <EditText
+                    android:id="@+id/input_wan_server"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:hint="https://sms.example.com (tùy chọn)"
+                    android:textColor="#FFFFFF"
+                    android:textColorHint="#64748B"
+                    android:textSize="13sp"
+                    android:padding="8dp"
+                    android:background="#334155"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="3. Tên thiết bị (Device ID):"
+                    android:textColor="#E2E8F0"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <EditText
+                    android:id="@+id/input_device_id"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp"
+                    android:padding="8dp"
+                    android:background="#334155"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="4. Device Token (Mặc định: 123):"
+                    android:textColor="#E2E8F0"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <EditText
+                    android:id="@+id/input_device_token"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp"
+                    android:padding="8dp"
+                    android:background="#334155"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="16dp" />
+
+                <Button
+                    android:id="@+id/btn_save_cloud"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:background="#0284C7"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold"
+                    android:textSize="13sp"
+                    android:text="💾 LƯU VÀ KẾT NỐI MÁY TÍNH"
+                    android:layout_marginBottom="8dp" />
+
+                <Button
+                    android:id="@+id/btn_stop_cloud"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:background="#EF4444"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"
+                    android:text="🛑 Dừng kết nối" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+</LinearLayout>

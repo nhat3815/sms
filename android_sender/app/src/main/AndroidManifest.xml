@@ -1,0 +1,88 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="vn.smsbridge.sender">
+    <uses-permission android:name="android.permission.BROADCAST_SMS" />
+    <uses-permission android:name="android.permission.BROADCAST_WAP_PUSH" />
+    <uses-permission android:name="android.permission.SEND_RESPOND_VIA_MESSAGE" />
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.WRITE_SMS" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
+    <uses-feature android:name="android.hardware.telephony.messaging" android:required="false" />
+
+    <application android:allowBackup="false" android:label="SMS Bridge Sender" android:theme="@style/AppTheme" android:debuggable="true" android:usesCleartextTraffic="true">
+        <activity 
+            android:name=".MainActivity" 
+            android:exported="true"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".CloudConfigActivity" android:exported="false" />
+        <activity 
+            android:name=".SettingsActivity" 
+            android:exported="true"
+            android:screenOrientation="portrait" />
+        <service
+            android:name=".CloudSyncService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+        <receiver android:name=".BootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+        <receiver android:name=".SmsCommandReceiver" android:exported="true">
+            <intent-filter><action android:name="vn.smsbridge.sender.SEND_SMS" /></intent-filter>
+        </receiver>
+        <receiver android:name=".SmsDeliverReceiver" android:exported="true" android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.SMS_DELIVER" />
+            </intent-filter>
+        </receiver>
+        <receiver android:name=".WapPushReceiver" android:exported="true" android:permission="android.permission.BROADCAST_WAP_PUSH">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.WAP_PUSH_DELIVER" />
+                <data android:mimeType="application/vnd.wap.mms-message" />
+            </intent-filter>
+        </receiver>
+        <activity android:name=".ComposeActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.SENDTO" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="sms" />
+                <data android:scheme="smsto" />
+                <data android:scheme="mms" />
+                <data android:scheme="mmsto" />
+            </intent-filter>
+        </activity>
+        <service android:name=".RespondViaMessageService" android:exported="true" android:permission="android.permission.SEND_RESPOND_VIA_MESSAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.RESPOND_VIA_MESSAGE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="sms" />
+                <data android:scheme="smsto" />
+                <data android:scheme="mms" />
+                <data android:scheme="mmsto" />
+            </intent-filter>
+        </service>
+        <receiver android:name=".SmsResultReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="vn.smsbridge.sender.SMS_SENT" />
+                <action android:name="vn.smsbridge.sender.SMS_DELIVERED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

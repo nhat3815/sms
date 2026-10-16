@@ -1,0 +1,35 @@
+Windows setup commands for sms_sender_tool
+===========================================
+
+Run these from CMD or PowerShell on Windows:
+
+1. Check Python launcher:
+   py -3 --version
+
+2. Check or install ADB:
+   where adb
+   winget install --id Google.PlatformTools -e --source winget --accept-package-agreements --accept-source-agreements
+
+3. Verify ADB:
+   adb version
+   adb devices
+
+4. Create or refresh the virtual environment:
+   py -3 -m venv .venv
+
+5. Install Python dependencies:
+   .venv\Scripts\python.exe -m pip install --disable-pip-version-check -q -r requirements.txt
+
+6. Start the tool:
+   .venv\Scripts\python.exe launcher.py
+
+7. Useful ADB checks when the phone is connected:
+   adb devices
+   adb shell getprop ro.product.model
+   adb shell pm list packages | findstr smsbridge
+   adb shell run-as vn.smsbridge.sender cat files/bridge_token
+
+8. If the device shows unauthorized:
+   - Unplug and replug USB
+   - Accept the RSA prompt on the phone
+   - Turn USB debugging off/on again if needed

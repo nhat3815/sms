@@ -1,0 +1,2661 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMS Bridge & Messenger</title>
+    <style>
+        :root {
+            --bg-base: #0f1117;
+            --bg-surface: #181b24;
+            --bg-card: #202431;
+            --bg-hover: #292f40;
+            --border-color: #2e3547;
+            --text-main: #f0f3f8;
+            --text-muted: #8b95a5;
+            --primary: #00b0ff;
+            --primary-dark: #0081cb;
+            --accent-green: #00e676;
+            --accent-red: #ff3d00;
+            --accent-orange: #ff9100;
+            --accent-purple: #b388ff;
+            --chat-bubble-self: #1a4971;
+            --chat-bubble-peer: #282f3f;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        body { background: var(--bg-base); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* Custom Modern Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
+        ::-webkit-scrollbar-thumb { background: #3a4256; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #505a74; }
+
+        /* Top Service Connection Bar */
+        .service-bar {
+            flex-shrink: 0;
+            background: #12151e;
+            border-bottom: 1px solid var(--border-color);
+            padding: 8px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+            font-weight: 500;
+            z-index: 100;
+        }
+        .service-info { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            background: rgba(0, 230, 118, 0.12);
+            color: var(--accent-green);
+            border: 1px solid rgba(0, 230, 118, 0.3);
+        }
+        .status-badge.warn { background: rgba(255, 145, 0, 0.12); color: var(--accent-orange); border-color: rgba(255, 145, 0, 0.3); }
+        .status-badge.error { background: rgba(255, 61, 0, 0.12); color: var(--accent-red); border-color: rgba(255, 61, 0, 0.3); }
+        .pulse-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: currentColor;
+            box-shadow: 0 0 8px currentColor;
+            animation: pulse 1.8s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.9); opacity: 0.8; }
+            50% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(0.9); opacity: 0.8; }
+        }
+
+        .service-devices { display: flex; gap: 12px; color: var(--text-muted); font-size: 12px; }
+        .device-tag { background: var(--bg-card); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border-color); color: var(--text-main); }
+        .service-actions { display: flex; gap: 8px; align-items: center; }
+
+        /* Nav Tabs */
+        .tab-nav {
+            flex-shrink: 0;
+            display: flex;
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 16px;
+        }
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 12px 18px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tab-btn:hover { color: var(--text-main); }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); background: rgba(0, 176, 255, 0.05); }
+
+        /* Main Container */
+        .app-body {
+            flex: 1 1 0%;
+            min-height: 0;
+            overflow: hidden;
+            display: flex;
+            position: relative;
+        }
+        .tab-content { display: none !important; width: 100%; height: 100%; min-height: 0; }
+        .tab-content.active { display: block !important; }
+
+        /* TAB 1: MESSAGING APP */
+        .messenger-layout.active {
+            display: grid !important;
+            grid-template-columns: 340px 1fr;
+            width: 100%;
+            height: 100%;
+            min-height: 0;
+            overflow: hidden;
+        }
+        .messenger-layout { width: 100%; height: 100%; min-height: 0; }
+        
+        /* Left: Conversation List */
+        .conv-sidebar {
+            background: var(--bg-surface);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 0;
+            overflow: hidden;
+        }
+        .conv-header {
+            flex-shrink: 0;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .conv-header-top { display: flex; justify-content: space-between; align-items: center; }
+        .conv-title { font-size: 15px; font-weight: 700; color: var(--text-main); }
+        .btn-new-msg {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: 0.2s;
+        }
+        .btn-new-msg:hover { background: var(--primary-dark); }
+        .search-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: var(--text-main);
+            font-size: 13px;
+            width: 100%;
+            outline: none;
+        }
+        .search-box:focus { border-color: var(--primary); }
+
+        .conv-list {
+            flex: 1 1 0%;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            list-style: none;
+        }
+        .conv-item {
+            padding: 12px 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            cursor: pointer;
+            display: flex;
+            gap: 12px;
+            transition: background 0.15s;
+            position: relative;
+        }
+        .conv-item:hover { background: var(--bg-hover); }
+        .conv-item.active { background: #1c2638; border-left: 3px solid var(--primary); }
+        .conv-avatar {
+            width: 42px; height: 42px; border-radius: 50%;
+            background: linear-gradient(135deg, #00b0ff, #7c4dff);
+            color: #fff; display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 15px; flex-shrink: 0;
+        }
+        .conv-details { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+        .conv-top-row { display: flex; justify-content: space-between; align-items: baseline; }
+        .conv-name { font-size: 14px; font-weight: 600; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .conv-time { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+        .conv-phone { font-size: 12px; color: var(--primary); font-weight: 500; }
+        .conv-preview { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .conv-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+        .conv-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; text-transform: uppercase; }
+        .badge-ok { background: rgba(0, 230, 118, 0.15); color: var(--accent-green); }
+        .badge-fail { background: rgba(255, 61, 0, 0.15); color: var(--accent-red); }
+        .badge-pending { background: rgba(255, 145, 0, 0.15); color: var(--accent-orange); }
+
+        /* Right: Chat Detail & Compose */
+        .chat-pane {
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-base);
+            height: 100%;
+            min-height: 0;
+            overflow: hidden;
+            position: relative;
+        }
+        .chat-header {
+            flex-shrink: 0;
+            padding: 12px 20px;
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-header-user { display: flex; align-items: center; gap: 12px; }
+        .chat-header-info h4 { font-size: 16px; color: var(--text-main); }
+        .chat-header-info span { font-size: 13px; color: var(--text-muted); }
+        .chat-history {
+            flex: 1 1 0%;
+            min-height: 0;
+            padding: 20px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .bubble-group { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; width: 100%; }
+        .chat-bubble {
+            max-width: 80%;
+            background: var(--chat-bubble-self);
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 16px 16px 4px 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+            font-size: 14px;
+            line-height: 1.45;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .bubble-meta {
+            font-size: 11px;
+            color: var(--text-muted);
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .bubble-tag { padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+
+        /* Chat Composer */
+        .chat-composer {
+            flex-shrink: 0;
+            background: var(--bg-surface);
+            border-top: 1px solid var(--border-color);
+            padding: 14px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .composer-fields { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        .input-group { display: flex; flex-direction: column; gap: 4px; }
+        .input-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+        .c-input, .c-select {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-main);
+            padding: 7px 10px;
+            font-size: 13px;
+            outline: none;
+        }
+        .c-input:focus, .c-select:focus { border-color: var(--primary); }
+        .composer-textarea {
+            width: 100%;
+            height: 72px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-main);
+            padding: 10px 14px;
+            font-size: 14px;
+            resize: none;
+            outline: none;
+        }
+        .composer-textarea:focus { border-color: var(--primary); }
+        .composer-footer { display: flex; justify-content: space-between; align-items: center; }
+        .char-counter { font-size: 12px; color: var(--text-muted); }
+        .char-counter.limit { color: var(--accent-orange); }
+        .composer-actions { display: flex; gap: 8px; }
+        .btn-send {
+            background: linear-gradient(135deg, #00b0ff, #0081cb);
+            color: #fff;
+            border: none;
+            padding: 9px 22px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-send:hover { filter: brightness(1.15); transform: translateY(-1px); }
+        .btn-send:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .btn-ghost:hover { color: var(--text-main); background: var(--bg-card); }
+
+        /* Empty state */
+        .empty-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            gap: 12px;
+        }
+        .empty-chat svg { width: 56px; height: 56px; fill: currentColor; opacity: 0.4; }
+
+        /* TAB 2: BULK CAMPAIGN */
+        .campaign-layout.active {
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) 320px;
+            gap: 18px;
+            padding: 20px;
+            overflow-y: auto;
+            width: 100%;
+            height: 100%;
+            min-height: 0;
+        }
+        .campaign-layout { width: 100%; height: 100%; min-height: 0; }
+        .bulk-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .template-item-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: relative;
+        }
+        .template-item-card:focus-within { border-color: var(--primary); }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+        .stat-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 14px;
+            text-align: center;
+        }
+        .stat-value { font-size: 24px; font-weight: 700; margin-top: 4px; }
+        .stat-value.green { color: var(--accent-green); }
+        .stat-value.red { color: var(--accent-red); }
+        .stat-value.blue { color: var(--primary); }
+
+        progress {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 100%;
+            height: 16px;
+        }
+        progress::-webkit-progress-bar { background-color: var(--bg-card); border-radius: 8px; }
+        progress::-webkit-progress-value {
+            background: linear-gradient(90deg, #00b0ff, #00e676);
+            border-radius: 8px;
+            transition: width 0.4s ease;
+        }
+
+        .action-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+        .action-btn {
+            padding: 12px 14px;
+            cursor: pointer;
+            font: 700 13px -apple-system, BlinkMacSystemFont, sans-serif;
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,.12);
+            color: white;
+            transition: .2s;
+            text-align: center;
+        }
+        .action-btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+        .btn-scan { background: #0288d1; }
+        .btn-start { background: #2e7d32; font-size: 14px; font-weight: 800; }
+        .btn-stop { background: #ef6c00; }
+        .btn-retry { background: #c2185b; }
+        .btn-delivery { background: #455a64; }
+        .btn-export { background: #1565c0; }
+        .btn-exit { background: #d32f2f; }
+
+        /* Device panel side */
+        .device-panel {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            height: fit-content;
+        }
+        .device-list { display: flex; flex-direction: column; gap: 10px; }
+        .modem-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 13px;
+            line-height: 1.4;
+            color: var(--text-main);
+        }
+        .modem-card.ready { border-color: rgba(0, 230, 118, 0.4); }
+        .modem-card.offline { border-color: #555; color: #888; }
+
+        /* TAB 3: LOGS & DETAILED TABLES */
+        .logs-layout.active {
+            width: 100%;
+            height: 100%;
+            min-height: 0;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex !important;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        /* Responsive Breakpoints & Auto Fluid Resize */
+        @media (max-width: 1100px) {
+            .campaign-layout.active {
+                grid-template-columns: minmax(0, 1fr) 280px !important;
+                padding: 14px !important;
+                gap: 12px !important;
+            }
+            .messenger-layout.active {
+                grid-template-columns: 300px 1fr !important;
+            }
+        }
+
+        @media (max-width: 850px) {
+            .campaign-layout.active {
+                grid-template-columns: 1fr !important;
+                overflow-y: auto !important;
+                height: 100% !important;
+            }
+            .messenger-layout.active {
+                grid-template-columns: 240px 1fr !important;
+            }
+            .composer-fields {
+                grid-template-columns: 1fr 1fr !important;
+            }
+            .service-bar {
+                flex-direction: column !important;
+                gap: 8px !important;
+                align-items: flex-start !important;
+            }
+        }
+
+        @media (max-width: 650px) {
+            .messenger-layout.active {
+                grid-template-columns: 1fr !important;
+            }
+            .conv-sidebar {
+                max-height: 220px !important;
+                border-right: none !important;
+                border-bottom: 1px solid var(--border-color) !important;
+            }
+            .composer-fields {
+                grid-template-columns: 1fr !important;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
+            flex-direction: column;
+            gap: 16px;
+        }
+        .logs-layout { width: 100%; height: 100%; min-height: 0; }
+        #log-box {
+            height: 260px;
+            overflow-y: scroll;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: left;
+            background: #000;
+            color: #00e676;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .data-table th, .data-table td {
+            border: 1px solid var(--border-color);
+            padding: 8px 10px;
+            text-align: left;
+            vertical-align: top;
+        }
+        .data-table th { background: var(--bg-card); color: var(--primary); font-weight: 600; }
+        .status-ok { color: var(--accent-green); font-weight: 600; }
+        .status-pending { color: var(--accent-orange); font-weight: 600; }
+        .status-fail { color: var(--accent-red); font-weight: 600; }
+    </style>
+</head>
+<body>
+
+    <!-- TOP SERVICE STATUS BAR -->
+    <header class="service-bar">
+        <div class="service-info">
+            <div id="service-status-badge" class="status-badge">
+                <div class="pulse-dot"></div>
+                <span id="service-status-text">SMS Service: Đang kết nối</span>
+            </div>
+            <div class="service-devices">
+                <span id="stat-android-tag" class="device-tag">📱 Android: 0 sẵn sàng</span>
+                <span id="stat-modem-tag" class="device-tag">📶 USB Modem: 0 sẵn sàng</span>
+                <span id="stat-adb-tag" class="device-tag">ADB: đang kiểm tra...</span>
+            </div>
+        </div>
+        <div class="service-actions">
+            <button class="btn-ghost" style="padding: 4px 12px; font-size: 12px; color: var(--accent-green); border-color: rgba(0, 230, 118, 0.4);" onclick="openWifiModal()">📶 Dò tìm Wi-Fi</button>
+            <button class="btn-ghost" style="padding: 4px 12px; font-size: 12px; color: #29b6f6; border-color: rgba(41, 182, 246, 0.4);" onclick="installAppOnDevices()">📲 Cài đặt App</button>
+            <button class="btn-ghost" style="padding: 4px 10px; font-size: 12px;" onclick="runAction('/connect')">🔄 Quét USB</button>
+            <button class="btn-ghost" style="padding: 4px 10px; font-size: 12px; color: #ffb300; border-color: rgba(255, 179, 0, 0.4);" onclick="updateApp()">⬆️ Cập nhật</button>
+            <button class="btn-ghost" style="padding: 4px 10px; font-size: 12px; color: var(--accent-red);" onclick="exitTool()">🔌 Thoát</button>
+        </div>
+    </header>
+
+    <!-- NAVIGATION TABS -->
+    <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="messenger" onclick="switchTab('messenger', this)">💬 Ứng dụng Tin nhắn</button>
+        <button class="tab-btn" data-tab="campaign" onclick="switchTab('campaign', this)">🚀 Chiến dịch Gửi hàng loạt</button>
+        <button class="tab-btn" data-tab="zalo" onclick="switchTab('zalo', this)">💙 Zalo 4 tài khoản</button>
+        <button class="tab-btn" data-tab="logs" onclick="switchTab('logs', this)">📜 Chi tiết Lịch sử & Console Log</button>
+    </nav>
+
+    <div class="app-body">
+
+        <!-- TAB 1: MESSENGER -->
+        <div id="tab-messenger" class="tab-content messenger-layout active">
+            <!-- Left: Conversations -->
+            <aside class="conv-sidebar">
+                <div class="conv-header">
+                    <div class="conv-header-top">
+                        <span class="conv-title">Hộp thư SMS</span>
+                        <button class="btn-new-msg" onclick="openNewComposer()">+ Soạn tin</button>
+                    </div>
+                    <input type="text" id="conv-search" class="search-box" placeholder="🔍 Tìm theo số điện thoại, tên..." oninput="filterConversations()">
+                </div>
+                <ul id="conv-list" class="conv-list">
+                    <!-- Conversations loaded dynamically -->
+                </ul>
+            </aside>
+
+            <!-- Right: Chat detail -->
+            <main class="chat-pane">
+                <div class="chat-header">
+                    <div class="chat-header-user">
+                        <div id="chat-avatar" class="conv-avatar" style="width:38px;height:38px;">💬</div>
+                        <div class="chat-header-info">
+                            <h4 id="chat-title">Chọn một cuộc trò chuyện</h4>
+                            <span id="chat-subtitle">Chưa có người nhận nào được chọn</span>
+                        </div>
+                    </div>
+                    <div id="chat-header-meta" style="font-size: 12px; color: var(--text-muted);"></div>
+                </div>
+
+                <div id="chat-history" class="chat-history">
+                    <div class="empty-chat">
+                        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+                        <p>Chọn một số điện thoại từ danh sách bên trái hoặc nhấn <b>+ Soạn tin</b> để gửi SMS mới.</p>
+                    </div>
+                </div>
+
+                <!-- Composer Box -->
+                <div class="chat-composer">
+                    <div class="composer-fields">
+                        <div class="input-group">
+                            <label class="input-label">Số điện thoại nhận (*)</label>
+                            <input type="text" id="composer-phone" class="c-input" placeholder="Ví dụ: 0912345678" oninput="onComposerPhoneChange()">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Tên người nhận</label>
+                            <input type="text" id="composer-name" class="c-input" placeholder="Ví dụ: Anh Tuấn" oninput="onComposerNameChange()">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Thiết bị gửi tin</label>
+                            <select id="composer-device" class="c-select">
+                                <option value="AUTO">Tự động (Khuyên dùng)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <select id="template-select" class="c-select" style="flex: 1;" onchange="insertTemplate()">
+                            <option value="">⚡ Chọn mẫu tin nhắn từ thư mục messages...</option>
+                        </select>
+                        <button type="button" class="btn-ghost" style="padding: 7px 12px; font-size: 12px; color: var(--accent-red); border-color: rgba(255,61,0,0.35);" onclick="deleteCurrentTemplate()" title="Xóa mẫu tin đang chọn khỏi thư mục messages">🗑️ Xóa</button>
+                    </div>
+
+                    <textarea id="composer-msg" class="composer-textarea" placeholder="Nhập nội dung tin nhắn SMS..." oninput="updateCharCount()"></textarea>
+
+                    <div class="composer-footer">
+                        <div id="char-counter" class="char-counter">Độ dài: 0 ký tự | 1 tin (GSM)</div>
+                        <div class="composer-actions">
+                            <button class="btn-ghost" onclick="clearComposer()">🧹 Xóa trắng</button>
+                            <button type="button" class="btn-ghost" style="color:var(--primary); font-weight: 600;" onclick="saveCurrentComposerMessage()">💾 Lưu tin hiện tại</button>
+                            <button id="btn-send-sms" class="btn-send" onclick="sendDirectMessage()">
+                                <span>🚀 GỬI TIN NHẮN</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- MODAL LƯU MẪU TIN NHẮN TRỰC TIẾP -->
+                    <div id="modal-save-template" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 99999; justify-content: center; align-items: center; backdrop-filter: blur(4px);">
+                        <div style="background: var(--bg-card); border: 1.5px solid var(--primary); border-radius: 12px; width: 480px; max-width: 95vw; box-shadow: 0 12px 40px rgba(0,0,0,0.85); overflow: hidden;">
+                            <div style="padding: 14px 18px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: rgba(0, 176, 255, 0.08);">
+                                <h3 style="margin: 0; font-size: 15px; color: var(--primary); display: flex; align-items: center; gap: 8px;">💾 Lưu Mẫu Tin Nhắn</h3>
+                                <button type="button" class="btn-ghost" style="border: none; font-size: 16px; cursor: pointer; padding: 2px 8px;" onclick="closeSaveTemplateModal()">✕</button>
+                            </div>
+                            <div style="padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+                                <div class="input-group">
+                                    <label class="input-label" style="font-weight: 600;">Tên gợi nhớ cho mẫu tin (*):</label>
+                                    <input type="text" id="save-tpl-name" class="c-input" placeholder="Ví dụ: Mẫu tin chào hỏi, Giảm giá 20%, Nhắc hẹn...">
+                                </div>
+                                <div class="input-group">
+                                    <label class="input-label" style="font-weight: 600;">Nội dung tin nhắn sẽ lưu:</label>
+                                    <textarea id="save-tpl-preview" class="c-input" style="height: 110px; resize: vertical; font-size: 13px; line-height: 1.5; background: rgba(0,0,0,0.25);" readonly></textarea>
+                                </div>
+                                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px;">
+                                    <button type="button" class="btn-ghost" onclick="closeSaveTemplateModal()">Đóng</button>
+                                    <button type="button" class="btn-send" style="padding: 8px 18px;" onclick="confirmSaveTemplate()">💾 Xác Nhận Lưu Mẫu</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- TAB 2: BULK CAMPAIGN -->
+        <div id="tab-campaign" class="tab-content campaign-layout">
+            <div class="bulk-main-column" style="display: flex; flex-direction: column; gap: 16px; min-width: 0;">
+                
+                <!-- 1. EXCEL IMPORT & PREVIEW CARD -->
+                <div class="bulk-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="display: flex; align-items: center; gap: 8px; font-size: 15px;">
+                            📥 1. Tải lên danh sách khách hàng (Excel / CSV)
+                        </h3>
+                        <span id="excel-status-badge" class="conv-badge badge-pending">Chưa có file</span>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" style="display: none;" onchange="onExcelFileSelected(event)">
+                        <button class="btn-send" style="padding: 8px 16px; font-size: 13px;" onclick="document.getElementById('excel-file-input').click()">
+                            📂 Chọn File Excel / CSV (.xlsx, .xls, .csv)
+                        </button>
+                        <a href="/api/download_template" class="btn-ghost" style="padding: 8px 14px; font-size: 13px; text-decoration: none; color: var(--accent-green); border-color: rgba(0, 230, 118, 0.4); display: inline-flex; align-items: center; gap: 6px;">
+                            📥 Tải File Mẫu Excel (.xlsx)
+                        </a>
+                        <button class="btn-ghost" style="padding: 8px 14px; font-size: 13px; color: var(--accent-orange); border-color: rgba(255, 145, 0, 0.4); display: inline-flex; align-items: center; gap: 6px;" onclick="resetCampaignStatus()" title="Xóa toàn bộ đánh dấu 'ĐÃ GỬI' trong file để gửi lại từ đầu">
+                            🔄 Xóa Trạng Thái Đã Gửi
+                        </button>
+                        <span id="excel-filename-label" style="font-size: 13px; color: var(--text-muted);">dulieu.xlsx</span>
+                    </div>
+
+                    <!-- Excel Summary Info -->
+                    <div id="excel-summary-box" style="display: none; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 14px; font-size: 13px;">
+                        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                            <span>📱 SĐT chờ gửi: <b id="excel-valid-count" style="color: var(--accent-green);">0</b></span>
+                            <span>✅ Đã gửi thành công: <b id="excel-sent-count" style="color: var(--primary);">0</b></span>
+                            <span>⚠️ Dòng lỗi bỏ qua: <b id="excel-invalid-count" style="color: var(--accent-red);">0</b></span>
+                            <span>🏷️ Cột SĐT: <b id="excel-phone-col" style="color: var(--primary);">ĐT</b></span>
+                            <span>👤 Cột Tên: <b id="excel-name-col" style="color: var(--accent-purple);">TÊN</b></span>
+                            <span>⚧ Giới tính: <b id="excel-gender-col" style="color: var(--accent-orange);">GIỚI TÍNH</b></span>
+                        </div>
+                    </div>
+
+                    <!-- Excel Preview Table -->
+                    <div id="excel-preview-container" style="display: none; max-height: 180px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px;">
+                        <table class="data-table" style="font-size: 12px;">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Số điện thoại</th>
+                                    <th>Họ & Tên gốc</th>
+                                    <th>Tên gửi (1 chữ cuối)</th>
+                                    <th>Giới tính (0/1)</th>
+                                    <th>Hiển thị {name}</th>
+                                </tr>
+                            </thead>
+                            <tbody id="excel-preview-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 2. MULTI-TEMPLATE PERSONALIZED MESSAGE CARD -->
+                <div class="bulk-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                        <h3 style="display: flex; align-items: center; gap: 8px; font-size: 15px;">
+                            📝 2. Nội dung tin nhắn cá nhân hóa ({name})
+                        </h3>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-ghost" style="padding: 4px 10px; font-size: 12px;" onclick="loadCampaignTemplatesFromFolder()">⚡ Nạp mẫu có sẵn</button>
+                            <button class="btn-ghost" style="padding: 4px 10px; font-size: 12px; color: var(--accent-green);" onclick="saveCampaignTemplatesToServer()">💾 Lưu mẫu tin hiện tại</button>
+                            <button class="btn-ghost" style="padding: 4px 10px; font-size: 12px; color: var(--primary);" onclick="addTemplateItem()">+ Thêm mẫu tin nhắn</button>
+                        </div>
+                    </div>
+
+                    <div style="background: rgba(0, 176, 255, 0.08); border: 1px solid rgba(0, 176, 255, 0.25); border-radius: 6px; padding: 10px 14px; font-size: 12px; line-height: 1.6; color: #b3e5fc;">
+                        💡 <b>Các thẻ cá nhân hóa nội dung tin nhắn:</b><br>
+                        • <code>{fullname}</code> hoặc <code>{hoten}</code> : Chèn <b>đầy đủ cả Họ và Tên gốc</b> (VD: <b>Nguyễn Văn Tuấn</b>, <b>Trần Thị Mai</b>).<br>
+                        • <code>{name}</code> : Tự động ghép xưng hô + tên ngắn (VD: <b>Anh Tuấn</b>, <b>Chị Mai</b>, <b>Anh Đức Anh</b>).<br>
+                        • <code>{ten}</code> : Lấy <b>đúng 1 chữ tên gọi</b> (VD: <i>Nguyễn Văn Tuấn</i> &rarr; <b>Tuấn</b>).<br>
+                        • <code>{xungho}</code> : Lấy danh xưng theo Giới tính (<b>1</b> &rarr; <i>Anh</i>, <b>0</b> &rarr; <i>Chị</i>, nếu trống &rarr; <i>Anh/Chị</i>).<br>
+                        • <code>{Tên cột Excel}</code> : Chèn dữ liệu từ bất kỳ cột nào trong file Excel (VD: <code>{GHI CHÚ}</code>, <code>{ĐIỆN THOẠI}</code>...).<br>
+                        🎲 <b>Chống chặn Spam:</b> Hệ thống sẽ <b>xoay vòng ngẫu nhiên</b> các mẫu tin nhắn khi gửi tới từng số điện thoại.
+                    </div>
+
+                    <!-- Container for multiple templates -->
+                    <div id="campaign-templates-container" style="display: flex; flex-direction: column; gap: 10px;">
+                        <!-- Rendered dynamically -->
+                    </div>
+
+                    <!-- Quick Live Preview Box -->
+                    <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                            <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">👁️ XEM THỬ VÍ DỤ THỰC TẾ:</span>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <input type="text" id="preview-test-name" class="c-input" value="Nguyễn Văn Tuấn" style="width: 150px; padding: 4px 8px; font-size: 12px;" placeholder="Họ và tên thử" oninput="updateAllTemplatePreviews()">
+                                <select id="preview-test-gender" class="c-select" style="width: 130px; padding: 4px 8px; font-size: 12px;" onchange="updateAllTemplatePreviews()">
+                                    <option value="1">1 (Nam / Anh)</option>
+                                    <option value="0">0 (Nữ / Chị)</option>
+                                    <option value="">Trống (Tự động)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="live-template-preview" style="font-size: 13px; color: #fff; background: var(--bg-surface); padding: 10px 14px; border-radius: 4px; border-left: 3px solid var(--primary); min-height: 30px; white-space: pre-wrap;"></div>
+                    </div>
+                </div>
+
+                <!-- 3. SEND CONFIG & CONTROL -->
+                <div class="bulk-card">
+                    <h3 style="font-size: 15px;">⚙️ 3. Tùy chọn & Bảng điều khiển gửi</h3>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+                        <div class="input-group">
+                            <label class="input-label">Thời gian chờ giữa 2 tin (Random)</label>
+                            <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                                <input type="number" id="campaign-delay-min" class="c-input" value="5" min="1" max="120" style="width: 70px;">
+                                <span style="color: var(--text-muted); font-size: 12px;">đến</span>
+                                <input type="number" id="campaign-delay-max" class="c-input" value="15" min="1" max="120" style="width: 70px;">
+                                <select id="campaign-delay-unit" class="c-select" style="width: 90px; padding: 4px 6px;">
+                                    <option value="minutes" selected>Phút</option>
+                                    <option value="seconds">Giây</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-label">Phân phối thiết bị gửi</label>
+                            <select id="campaign-device-mode" class="c-select">
+                                <option value="ALL">Tất cả thiết bị sẵn sàng (Chia đều)</option>
+                                <option value="ANDROID">Chỉ dùng điện thoại Android</option>
+                                <option value="USB_MODEM">Chỉ dùng USB Modem</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px; padding: 8px 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="campaign-check-cooldown" checked style="cursor: pointer;">
+                            <span>🛡️ <strong>Chống spam:</strong> Bỏ qua số đã gửi thành công trong 24 giờ qua</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="campaign-dedup-excel" checked style="cursor: pointer;">
+                            <span>📑 <strong>Lọc trùng:</strong> Tự động lọc trùng số điện thoại trong file Excel</span>
+                        </label>
+                    </div>
+
+                    <div class="stats-grid" style="margin-top: 6px;">
+                        <div class="stat-box">
+                            <div style="color: var(--text-muted); font-size: 12px;">ĐÃ XỬ LÝ</div>
+                            <div id="stat-total" class="stat-value blue">0/0</div>
+                        </div>
+                        <div class="stat-box">
+                            <div style="color: var(--accent-green); font-size: 12px;">THÀNH CÔNG</div>
+                            <div id="stat-success" class="stat-value green">0</div>
+                        </div>
+                        <div class="stat-box">
+                            <div style="color: var(--accent-red); font-size: 12px;">THẤT BẠI</div>
+                            <div id="stat-fail" class="stat-value red">0</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 4px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">
+                            <span>Tiến trình hoàn thành</span>
+                            <span id="progress-percent-label">0%</span>
+                        </div>
+                        <progress id="pbar" value="0" max="100"></progress>
+                    </div>
+
+                    <div class="action-bar" style="margin-top: 10px;">
+                        <button class="action-btn btn-start" style="padding: 14px;" onclick="startBulkCampaign()">🚀 BẮT ĐẦU GỬI CHIẾN DỊCH</button>
+                        <button class="action-btn btn-stop" onclick="runAction('/stop')">⏸️ TẠM DỪNG</button>
+                        <button class="action-btn btn-export" onclick="downloadCampaignExcel()">📥 TẢI EXCEL ĐÃ ĐÁNH DẤU</button>
+                        <button class="action-btn btn-retry" style="background: rgba(255, 145, 0, 0.15); color: var(--accent-orange); border-color: rgba(255, 145, 0, 0.4);" onclick="resetCampaignStatus()" title="Xóa trạng thái đã gửi trong file Excel để gửi lại toàn bộ">🔄 XÓA ĐÃ GỬI</button>
+                        <button class="action-btn btn-retry" onclick="runAction('/retry')">🔁 GỬI LẠI SỐ LỖI</button>
+                        <button class="action-btn btn-delivery" onclick="runAction('/delivery')">📊 KIỂM TRA GIAO NHẬN</button>
+                        <button class="action-btn btn-export" onclick="downloadHistory()">📥 XUẤT CSV</button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Column: Connected Devices -->
+            <div class="device-panel">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h4 style="font-size: 14px;">Thiết bị kết nối</h4>
+                    <div style="display: flex; gap: 4px;">
+                        <button class="btn-ghost" style="padding: 3px 8px; font-size: 11px; color: var(--accent-green);" onclick="openWifiModal()">📶 Dò Wi-Fi</button>
+                        <button class="btn-ghost" style="padding: 3px 8px; font-size: 11px; color: #29b6f6;" onclick="installAppOnDevices()">📲 Cài App</button>
+                        <button class="btn-ghost" style="padding: 3px 8px; font-size: 11px;" onclick="runAction('/connect')">🔄 Quét USB</button>
+                    </div>
+                </div>
+
+                <!-- Wi-Fi Auto-Scan & Quick IP Box -->
+                <div style="background: rgba(0, 176, 255, 0.08); border: 1px solid rgba(0, 176, 255, 0.2); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 6px; font-size: 12px;">
+                    <span style="font-weight: 600; color: var(--primary);">📶 Kết nối Không Dây (100% Không Dây Cáp)</span>
+                    <button class="action-btn btn-scan" style="padding: 8px; font-size: 12px;" onclick="openWifiModal()">📱 KẾT NỐI & CÀI ĐẶT ĐIỆN THOẠI QUA WI-FI</button>
+                </div>
+
+                <div id="device-list" class="device-list">
+                    <div class="modem-card offline">Đang quét thiết bị...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: ZALO MULTI-ACCOUNT -->
+        <div id="tab-zalo" class="tab-content" style="padding: 16px; overflow-y: auto;">
+            <h3>💙 Zalo Web 4 tài khoản</h3>
+            <p style="color: var(--text-muted); font-size: 13px; margin: 8px 0 16px;">Mỗi ô dùng profile Chrome/Edge riêng nên giữ đăng nhập riêng. Lần đầu quét QR từng tài khoản.</p>
+            <div style="display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 14px;">
+                <div class="bulk-card"><h4>Zalo 01</h4><button class="action-btn btn-start" onclick="openZaloSlot(1)">Mở / đăng nhập</button><button class="action-btn btn-stop" onclick="resetZaloSlot(1)">Xóa phiên</button></div>
+                <div class="bulk-card"><h4>Zalo 02</h4><button class="action-btn btn-start" onclick="openZaloSlot(2)">Mở / đăng nhập</button><button class="action-btn btn-stop" onclick="resetZaloSlot(2)">Xóa phiên</button></div>
+                <div class="bulk-card"><h4>Zalo 03</h4><button class="action-btn btn-start" onclick="openZaloSlot(3)">Mở / đăng nhập</button><button class="action-btn btn-stop" onclick="resetZaloSlot(3)">Xóa phiên</button></div>
+                <div class="bulk-card"><h4>Zalo 04</h4><button class="action-btn btn-start" onclick="openZaloSlot(4)">Mở / đăng nhập</button><button class="action-btn btn-stop" onclick="resetZaloSlot(4)">Xóa phiên</button></div>
+            </div>
+        </div>
+
+        <!-- TAB 4: LOGS & HISTORY -->
+        <div id="tab-logs" class="tab-content logs-layout">
+            <h4>📜 Console Logs (Nhật ký thời gian thực)</h4>
+            <div id="log-box">Đang kết nối hệ thống log...</div>
+
+            <h4 style="margin-top: 10px;">📋 Toàn bộ lịch sử tin nhắn</h4>
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table id="history-table" class="data-table">
+                    <thead><tr><th>Thời gian</th><th>Số</th><th>Tên</th><th>Transport</th><th>Thiết bị</th><th>MR</th><th>Trạng thái</th><th>Giao nhận</th><th>Nội dung</th><th>Phản hồi</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <h4 style="margin-top: 10px;">🤖 Nhật ký sự kiện Android (Raw Events)</h4>
+            <div style="max-height: 300px; overflow-y: auto;">
+                <table id="android-events-table" class="data-table">
+                    <thead><tr><th>Thiết bị</th><th>Job ID</th><th>Stage</th><th>Trạng thái</th><th>Lỗi</th><th>Phản hồi chi tiết</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MODAL: DÒ TÌM & CHỌN THIẾT BỊ ANDROID QUA WI-FI (100% KHÔNG DÂY) -->
+    <div id="wifi-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 9999; justify-content: center; align-items: center; backdrop-filter: blur(4px);">
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; width: 640px; max-width: 95vw; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.8); overflow: hidden;">
+            
+            <!-- Modal Header -->
+            <div style="padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: rgba(0, 176, 255, 0.06);">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 24px;">📱</span>
+                    <div>
+                        <h3 style="margin: 0; font-size: 16px; color: var(--primary);">Kết Nối & Cài Đặt Android Qua Wi-Fi (100% Không Cần Cáp USB)</h3>
+                        <p style="margin: 0; font-size: 11px; color: var(--text-muted);">Dò tìm điện thoại trong mạng Wi-Fi / Hotspot và tự động cài App từ xa</p>
+                    </div>
+                </div>
+                <button class="btn-ghost" style="padding: 4px 10px; font-size: 18px; border: none; cursor: pointer;" onclick="closeWifiModal()">✕</button>
+            </div>
+
+            <!-- Modal Body -->
+            <div style="padding: 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px;">
+                
+                <!-- 0. 100% WIRELESS APP BRIDGE (NO CABLE, NO PORT 5555 NEEDED, ANDROID 10+) -->
+                <div style="background: linear-gradient(135deg, rgba(0, 230, 118, 0.12), rgba(0, 176, 255, 0.08)); border: 1.5px solid #00E676; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <b style="color: #00E676; font-size: 14px; display: flex; align-items: center; gap: 6px;">
+                            🚀 KẾT NỐI KHÔNG DÂY 100% (KHÔNG CẦN CÁP USB / ANDROID 10+):
+                        </b>
+                        <span style="font-size: 11px; background: rgba(0,230,118,0.2); color: #00E676; padding: 2px 8px; border-radius: 12px; font-weight: bold;">KHUYÊN DÙNG</span>
+                    </div>
+                    <div style="font-size: 12px; line-height: 1.6; color: var(--text-main);">
+                        Nếu điện thoại không mở được cổng ADB 5555, hãy kết nối trực tiếp qua ứng dụng SMS Bridge trên điện thoại:<br>
+                        1. Mở ứng dụng <b>SMS Bridge Sender</b> trên điện thoại.<br>
+                        2. Bấm vào nút <b>"Cấu hình Cloud"</b> (hoặc biểu tượng Cloud/mạng).<br>
+                        3. Điền cấu hình sau:<br>
+                        &nbsp;&nbsp;• <b>Master LAN:</b> <code id="master-lan-badge" style="background: #111; color: #ffea00; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 13px;">Đang dò IP Wi-Fi...</code> 
+                        <button class="btn-ghost" style="padding: 2px 8px; font-size: 11px; margin-left: 6px; color: #00E676; border-color: #00E676; cursor: pointer;" onclick="copyMasterLanUrl()">📋 Sao chép</button><br>
+                        &nbsp;&nbsp;• <b>Device ID:</b> <code style="background: #111; color: #ffea00; padding: 2px 6px; border-radius: 4px;">phone1</code> (hoặc tên bất kỳ)<br>
+                        &nbsp;&nbsp;• <b>Device token:</b> <code style="background: #111; color: #ffea00; padding: 2px 6px; border-radius: 4px;">123</code> (hoặc bất kỳ)<br>
+                        4. Bấm <b>"Lưu và chạy cloud service"</b>.<br>
+                        👉 Điện thoại sẽ lập tức kết nối và nhận lệnh gửi tin nhắn hoàn toàn không dây!
+                    </div>
+                </div>
+
+                <!-- 1. Direct Web APK Download for new phone -->
+                <div style="background: rgba(0, 230, 118, 0.06); border: 1px solid rgba(0, 230, 118, 0.25); border-radius: 8px; padding: 14px; display: flex; gap: 14px; align-items: center;">
+                    <div style="background: #fff; padding: 6px; border-radius: 6px; flex-shrink: 0; text-align: center;">
+                        <img id="qr-apk-download" src="" alt="QR Code" width="110" height="110" style="display: block; min-height: 110px;">
+                        <span style="font-size: 10px; color: #333; font-weight: bold; margin-top: 2px; display: block;">Quét mã tải APK</span>
+                    </div>
+                    <div style="flex: 1; min-width: 0; font-size: 12px; line-height: 1.6;">
+                        <b style="color: var(--accent-green); font-size: 13px;">📲 TẢI VÀ CÀI ĐẶT APP LÊN ĐIỆN THOẠI:</b><br>
+                        1. Đảm bảo điện thoại và máy tính kết nối <b>chung mạng Wi-Fi</b> (hoặc Wi-Fi Hotspot do máy tính phát).<br>
+                        2. Lấy camera điện thoại <b>quét mã QR</b> hoặc mở trình duyệt trên điện thoại gõ:<br>
+                        <a id="apk-direct-link" href="/download/apk" target="_blank" style="color: #ffea00; font-weight: 700; font-size: 13px; word-break: break-all; background: #111; padding: 2px 6px; border-radius: 4px;">Đang tải địa chỉ...</a><br>
+                        <span id="network-addresses" style="color: var(--text-muted); font-size: 11px;">Wi-Fi: đang kiểm tra...</span><br>
+                        3. Bấm tải về và mở cài đặt ngay trên điện thoại (Mất 3 giây, hoàn toàn không cần cáp).
+                    </div>
+                </div>
+
+                <!-- 2. Auto Scan LAN Subnets -->
+                <div style="background: rgba(0, 176, 255, 0.04); border: 1px solid rgba(0, 176, 255, 0.2); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <b style="color: var(--primary); font-size: 13px;">⚡ Cách 2: Tự động quét & Cài đặt qua Wi-Fi từ máy tính:</b>
+                        <div style="display: flex; gap: 6px;">
+                            <button class="btn-send" style="padding: 6px 14px; font-size: 12px; background: linear-gradient(135deg, #00E676, #00B0FF); color: #000; font-weight: 700;" onclick="connectAllWifiDevices()">🚀 KẾT NỐI TẤT CẢ (ALL)</button>
+                            <button class="btn-ghost" style="padding: 6px 12px; font-size: 12px;" onclick="loadWifiDiscoveryList()">🔄 Quét lại</button>
+                        </div>
+                    </div>
+
+                    <!-- Devices List Container -->
+                    <div id="wifi-discovered-list" style="display: flex; flex-direction: column; gap: 8px; min-height: 80px;">
+                        <div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 12px;">
+                            Đang quét tìm các thiết bị Android trong mạng...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Manual IP Input fallback -->
+                <div style="background: rgba(255,255,255,0.03); border: 1px dashed var(--border-color); border-radius: 8px; padding: 12px;">
+                    <div style="font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">⚡ Hoặc kết nối thủ công bằng địa chỉ IP:</div>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="modal-manual-ip" class="c-input" placeholder="Ví dụ: 192.168.137.238:5555" style="flex: 1; padding: 6px 10px; font-size: 12px;">
+                        <button class="btn-send" style="padding: 6px 14px; font-size: 12px;" onclick="connectManualTarget()">Kết nối IP</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div style="padding: 12px 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2);">
+                <button class="btn-ghost" style="padding: 6px 12px; font-size: 12px; color: #29b6f6;" onclick="installAppOnDevices()">📲 Cài đặt App lên tất cả thiết bị</button>
+                <button class="btn-ghost" style="padding: 6px 16px; font-size: 12px;" onclick="closeWifiModal()">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSelectedPhone = null;
+        let allConversations = [];
+        let allTemplates = [];
+        let campaignTemplatesList = [
+            "Chào {name}, cảm ơn anh/chị đã quan tâm và sử dụng dịch vụ của chúng tôi!",
+            "Xin chào {name}, thông báo ưu đãi đặc biệt gửi tới anh/chị hôm nay.",
+            "{name} thân mến, chúc anh/chị một ngày làm việc tràn đầy năng lượng và hiệu quả!"
+        ];
+        let lastLogVersion = -1;
+        let campaignWasRunning = false;
+        let campaignDownloadDone = false;
+
+        function openWifiModal() {
+            var modal = document.getElementById('wifi-modal');
+            if (modal) {
+                modal.style.display = 'flex';
+                loadWifiDiscoveryList();
+            }
+        }
+
+        function closeWifiModal() {
+            var modal = document.getElementById('wifi-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function copyMasterLanUrl() {
+            var badgeEl = document.getElementById('master-lan-badge');
+            var text = badgeEl ? badgeEl.textContent.trim() : '';
+            if (!text || text.includes('Đang')) {
+                alert('Đang lấy địa chỉ mạng Wi-Fi, vui lòng chờ 1 giây...');
+                return;
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(function() {
+                    alert('✅ ĐÃ SAO CHÉP THÀNH CÔNG:\n' + text + '\n\n👉 Hãy dán địa chỉ này vào ô "Master LAN" trong mục "Cấu hình Cloud" của ứng dụng trên điện thoại!');
+                }).catch(function() {
+                    prompt('Nhấn Ctrl+C để sao chép địa chỉ Master LAN:', text);
+                });
+            } else {
+                prompt('Nhấn Ctrl+C để sao chép địa chỉ Master LAN:', text);
+            }
+        }
+
+        async function loadNetworkInfo() {
+            var qrImg = document.getElementById('qr-apk-download');
+            var apkLink = document.getElementById('apk-direct-link');
+            var addresses = document.getElementById('network-addresses');
+            var masterBadge = document.getElementById('master-lan-badge');
+
+            try {
+                var netRes = await fetch('/api/network_info');
+                if (netRes.ok) {
+                    var netData = await netRes.json();
+                    var srvPort = netData.server_port || window.location.port || '5000';
+                    var lanHost = (netData.master_lan_ip && netData.master_lan_ip !== '127.0.0.1')
+                        ? netData.master_lan_ip
+                        : (netData.primary_ip && netData.primary_ip !== '127.0.0.1'
+                            ? netData.primary_ip
+                            : (window.location.hostname !== '127.0.0.1' && window.location.hostname !== 'localhost' ? window.location.hostname : ''));
+
+                    var dlUrl = netData.download_url;
+                    if (!dlUrl || dlUrl.includes('127.0.0.1') || dlUrl.includes('localhost')) {
+                        if (lanHost) {
+                            dlUrl = 'http://' + lanHost + (srvPort ? (':' + srvPort) : '') + '/download/apk';
+                        } else {
+                            dlUrl = window.location.origin + '/download/apk';
+                        }
+                    }
+
+                    if (apkLink) {
+                        apkLink.href = dlUrl;
+                        apkLink.textContent = dlUrl;
+                    }
+                    if (qrImg) {
+                        qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=' + encodeURIComponent(dlUrl);
+                    }
+                    if (addresses) {
+                        var parts = [];
+                        if (lanHost) parts.push('Wi-Fi / LAN: ' + lanHost + ':' + srvPort);
+                        if (netData.hotspot_ip) parts.push('Hotspot: ' + netData.hotspot_ip + ':' + srvPort);
+                        addresses.textContent = parts.length > 0 ? parts.join(' | ') : ('IP: ' + (window.location.hostname || '127.0.0.1') + ':' + srvPort);
+                    }
+                    var masterUrl = netData.master_lan_url || ('http://' + (lanHost || '127.0.0.1') + ':' + (netData.server_port || 8765));
+                    if (masterBadge) masterBadge.textContent = masterUrl;
+                }
+            } catch (e) {
+                console.error("loadNetworkInfo error:", e);
+            }
+        }
+
+        async function loadWifiDiscoveryList() {
+            var listEl = document.getElementById('wifi-discovered-list');
+            var label = document.getElementById('wifi-scan-status-label');
+
+            await loadNetworkInfo();
+
+            if (!listEl) return;
+            
+            listEl.innerHTML = '<div style="text-align:center;padding:25px;color:var(--text-muted);font-size:13px;">⏳ Đang quét dải mạng Wi-Fi & Hotspot...</div>';
+            if (label) label.textContent = 'Đang quét dải mạng Wi-Fi...';
+
+            try {
+                var res = await fetch('/api/discover_wifi_devices', { method: 'POST' });
+                var data = await res.json();
+                if (!res.ok) {
+                    listEl.innerHTML = '<div style="color:var(--accent-red);padding:20px;text-align:center;">Lỗi quét mạng: ' + escapeHtml(data.message || 'Lỗi') + '</div>';
+                    if (label) label.textContent = 'Quét thất bại';
+                    return;
+                }
+
+                var devices = data.devices || [];
+                if (label) label.textContent = 'Tìm thấy ' + devices.length + ' thiết bị trên mạng';
+
+                if (!devices.length) {
+                    listEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;background:rgba(255,255,255,0.02);border-radius:8px;line-height:1.6;">' +
+                        'Chưa thấy thiết bị nào mở cổng ADB trên Wi-Fi này.<br>' +
+                        '<b style="color:var(--accent-green);">👉 Mẹo: Lấy điện thoại quét mã QR bên trên để tải và cài App trực tiếp trong 3 giây!</b>' +
+                    '</div>';
+                    return;
+                }
+
+                listEl.innerHTML = devices.map(function(d) {
+                    var appBadge = d.has_app ? 
+                        '<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;background:rgba(0,230,118,0.15);color:#00E676;font-weight:600;margin-right:4px;">📱 ĐÃ CÀI APP SMS BRIDGE</span>' :
+                        '<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;background:rgba(255,152,0,0.15);color:#ffb74d;font-weight:600;margin-right:4px;">⚠️ CHƯA CÀI APP</span>';
+
+                    var statusBadge = '';
+                    var actionBtn = '';
+
+                    if (d.status === 'ready') {
+                        statusBadge = '<span class="conv-badge badge-ok" style="font-size:11px;">✅ ĐANG KẾT NỐI (SẴN SÀNG)</span>';
+                        actionBtn = '<div style="display:flex;gap:6px;">' +
+                            '<button class="btn-ghost" style="padding:4px 10px;font-size:11px;color:#29b6f6;" onclick="installAppOnDevices(\'' + escapeHtml(d.target) + '\')">📲 Cài lại App</button>' +
+                            '<button class="btn-ghost" style="padding:4px 10px;font-size:11px;color:var(--accent-red);" onclick="disconnectSpecificDevice(\'' + escapeHtml(d.target) + '\')">🔌 Ngắt</button>' +
+                        '</div>';
+                    } else if (d.status === 'unauthorized') {
+                        statusBadge = '<span class="conv-badge badge-fail" style="font-size:11px;">⚠️ CẦN BẤM CHO PHÉP TRÊN MÀN HÌNH ĐT</span>';
+                        actionBtn = '<button class="btn-send" style="padding:4px 12px;font-size:11px;" onclick="connectSpecificDevice(\'' + escapeHtml(d.target) + '\')">⚡ Thử lại</button>';
+                    } else if (d.status === 'companion_not_installed') {
+                        statusBadge = '<span class="conv-badge badge-fail" style="font-size:11px;">⚠️ CHƯA CÀI APP</span>';
+                        actionBtn = '<button class="btn-send" style="padding:4px 12px;font-size:11px;background:#29b6f6;color:#000;font-weight:600;" onclick="installAppOnDevices(\'' + escapeHtml(d.target) + '\')">📲 Cài App ngay</button>';
+                    } else if (d.status === 'port_closed') {
+                        statusBadge = '<span class="conv-badge badge-fail" style="font-size:11px;background:rgba(255,152,0,0.2);color:#ff9800;">📶 PHÁT HIỆN MÁY (KẾT NỐI QUA APP)</span>';
+                        actionBtn = '<div style="display:flex;gap:4px;"><button class="btn-send" style="padding:4px 12px;font-size:11px;background:#00E676;color:#000;font-weight:bold;" onclick="alert(\'' + escapeHtml(d.message || '') + '\')">📲 Kết nối App ngay</button></div>';
+                    } else {
+                        statusBadge = '<span class="conv-badge badge-pending" style="font-size:11px;">📶 TÌM THẤY (CHƯA KẾT NỐI)</span>';
+                        actionBtn = '<button class="btn-send" style="padding:4px 14px;font-size:11px;" onclick="connectSpecificDevice(\'' + escapeHtml(d.target) + '\')">⚡ Kết nối máy này</button>';
+                    }
+
+                    return '<div style="background:rgba(255,255,255,0.04);border:1px solid var(--border-color);border-radius:8px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;">' +
+                        '<div>' +
+                            '<div style="font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;">' +
+                                '📱 ' + escapeHtml(d.model || 'Android Phone') +
+                                '<span style="font-size:11px;color:var(--primary);font-weight:normal;">(' + escapeHtml(d.target) + ')</span>' +
+                            '</div>' +
+                            '<div style="margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
+                                appBadge +
+                                statusBadge +
+                            '</div>' +
+                        '</div>' +
+                        '<div>' + actionBtn + '</div>' +
+                    '</div>';
+                }).join('');
+
+            } catch (err) {
+                listEl.innerHTML = '<div style="color:var(--accent-red);padding:20px;text-align:center;">Lỗi kết nối: ' + escapeHtml(err) + '</div>';
+            }
+        }
+
+        async function connectAllWifiDevices() {
+            var label = document.getElementById('wifi-scan-status-label');
+            if (label) label.textContent = 'Đang kết nối toàn bộ thiết bị...';
+            try {
+                var res = await fetch('/api/connect_all_wifi', { method: 'POST' });
+                var data = await res.json();
+                if (!res.ok) {
+                    alert('Lỗi kết nối: ' + (data.message || 'Thất bại'));
+                } else {
+                    var connected = data.connected || [];
+                    alert('🎉 ĐÃ KẾT NỐI TẤT CẢ THÀNH CÔNG!\n\n- Đã kết nối: ' + connected.length + ' thiết bị.\n- Sẵn sàng gửi tin: ' + data.ready_count + ' máy.');
+                    await loadWifiDiscoveryList();
+                    await updateStatusAndLogs();
+                    await loadDevices();
+                }
+            } catch (err) {
+                alert('Lỗi: ' + err);
+            }
+        }
+
+        async function connectSpecificDevice(target) {
+            try {
+                var res = await fetch('/api/connect_device', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target: target })
+                });
+                var data = await res.json();
+                if (!res.ok) {
+                    alert('Không thể kết nối tới ' + target + ':\n' + (data.message || 'Lỗi'));
+                } else {
+                    await loadWifiDiscoveryList();
+                    await updateStatusAndLogs();
+                    await loadDevices();
+                }
+            } catch (err) {
+                alert('Lỗi: ' + err);
+            }
+        }
+
+        async function disconnectSpecificDevice(target) {
+            try {
+                await fetch('/api/disconnect_device', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target: target })
+                });
+                await loadWifiDiscoveryList();
+                await updateStatusAndLogs();
+                await loadDevices();
+            } catch (err) {
+                alert('Lỗi: ' + err);
+            }
+        }
+
+        async function connectManualTarget() {
+            var input = document.getElementById('modal-manual-ip');
+            var ip = (input ? input.value : '').trim();
+            if (!ip) {
+                alert('Vui lòng nhập địa chỉ IP');
+                return;
+            }
+            await connectSpecificDevice(ip);
+            if (input) input.value = '';
+        }
+
+        async function installAppOnDevices(targetSerial) {
+            if (!confirm('Bạn có muốn tự động cài đặt App SMS Bridge và cấp toàn bộ quyền SMS cho điện thoại?')) return;
+            try {
+                var res = await fetch('/api/install_app', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ serial: targetSerial || null })
+                });
+                var data = await res.json();
+                if (!res.ok) {
+                    alert('Lỗi cài đặt App:\n' + (data.message || 'Không thể cài đặt'));
+                } else {
+                    alert('🎉 THÀNH CÔNG!\n' + (data.message || 'Đã cài đặt App thành công và mở App trên điện thoại!'));
+                    await updateStatusAndLogs();
+                    await loadDevices();
+                    if (document.getElementById('wifi-modal') && document.getElementById('wifi-modal').style.display === 'flex') {
+                        await loadWifiDiscoveryList();
+                    }
+                }
+            } catch (err) {
+                alert('Lỗi kết nối khi cài đặt App: ' + err);
+            }
+        }
+
+        function switchTab(tabId, btnEl) {
+            try {
+                document.querySelectorAll('.tab-btn').forEach(function(btn) { btn.classList.remove('active'); });
+                document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+                
+                var targetTab = document.getElementById('tab-' + tabId);
+                if (targetTab) targetTab.classList.add('active');
+                
+                if (btnEl) {
+                    btnEl.classList.add('active');
+                } else {
+                    var btn = document.querySelector('.tab-btn[data-tab="' + tabId + '"]');
+                    if (btn) btn.classList.add('active');
+                }
+
+                if (tabId === 'messenger') {
+                    loadConversations();
+                    loadDevices();
+                } else if (tabId === 'campaign') {
+                    loadCampaignInfo();
+                    loadDevices();
+                } else if (tabId === 'zalo') {
+                    // Browser profile windows are opened by user action.
+                } else if (tabId === 'logs') {
+                    loadHistoryTable();
+                    loadAndroidEventsTable();
+                }
+            } catch (e) {
+                console.error("switchTab error:", e);
+            }
+        }
+
+        function escapeHtml(val) {
+            if (val === null || val === undefined) return '';
+            return String(val)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        async function runAction(path) {
+            try {
+                if (path === '/connect') {
+                    var statusText = document.getElementById('service-status-text');
+                    if (statusText) statusText.textContent = 'SMS Service: Đang quét thiết bị...';
+                }
+                var response = await fetch(path, { method: 'POST' });
+                var data = await response.json();
+                if (!response.ok) {
+                    alert(data.message || data.status || 'Yêu cầu thất bại');
+                } else if (path === '/connect') {
+                    alert('✅ Kết nối thành công!\n- Thiết bị Android: ' + (data.android || 0) + '\n- USB Modem: ' + (data.modems || 0));
+                }
+                updateStatusAndLogs();
+                loadDevices();
+            } catch (error) {
+                alert('Lỗi: ' + error);
+            }
+        }
+
+        async function updateApp() {
+            if (!confirm('Cập nhật ứng dụng từ git?\n- Nếu có bản mới, ứng dụng sẽ tự khởi động lại.\n- Chiến dịch đang chạy sẽ bị từ chối cập nhật.')) return;
+            try {
+                var response = await fetch('/api/update', { method: 'POST' });
+                var data = await response.json();
+                alert(data.message || data.status);
+                if (data.updated) {
+                    document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;font-size:20px;color:#888;">Đang khởi động lại ứng dụng với bản cập nhật mới... Vui lòng đợi khoảng 10 giây rồi tải lại trang.</div>';
+                }
+                updateStatusAndLogs();
+            } catch (error) {
+                alert('Lỗi: ' + error);
+            }
+        }
+
+        async function exitTool() {            if (confirm('Bạn có chắc chắn muốn tắt hoàn toàn công cụ SMS?')) {
+                try {
+                    await fetch('/shutdown', { method: 'POST' });
+                    document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;font-size:20px;color:#888;">Đã tắt ứng dụng SMS Sender Tool thành công. Bạn có thể đóng tab trình duyệt này.</div>';
+                } catch (e) {
+                    alert('Đã gửi lệnh tắt ứng dụng.');
+                }
+            }
+        }
+
+        async function startBulkCampaign() {
+            var cleanTemplates = campaignTemplatesList.map(function(t) { return t.trim(); }).filter(function(t) { return t.length > 0; });
+            if (!cleanTemplates.length) {
+                alert('Vui lòng nhập ít nhất 1 nội dung tin nhắn cho chiến dịch!');
+                return;
+            }
+
+            var delayMin = parseFloat(document.getElementById('campaign-delay-min') ? document.getElementById('campaign-delay-min').value : 5) || 5;
+            var delayMax = parseFloat(document.getElementById('campaign-delay-max') ? document.getElementById('campaign-delay-max').value : 15) || 15;
+            var delayUnit = (document.getElementById('campaign-delay-unit') ? document.getElementById('campaign-delay-unit').value : 'minutes') || 'minutes';
+            var deviceMode = document.getElementById('campaign-device-mode') ? document.getElementById('campaign-device-mode').value : 'ALL';
+            var checkCooldown = document.getElementById('campaign-check-cooldown') ? document.getElementById('campaign-check-cooldown').checked : true;
+            var dedupExcel = document.getElementById('campaign-dedup-excel') ? document.getElementById('campaign-dedup-excel').checked : true;
+
+            if (delayMax < delayMin) delayMax = delayMin;
+
+            var payload = {
+                templates: cleanTemplates,
+                delay_min: delayMin,
+                delay_max: delayMax,
+                delay_unit: delayUnit,
+                device_mode: deviceMode,
+                ignore_cooldown: !checkCooldown,
+                dedup_excel: dedupExcel
+            };
+
+            try {
+                var res = await fetch('/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                var data = await res.json();
+                if (!res.ok) {
+                    if (data.status === 'all_cooldown') {
+                        var forceSend = confirm(data.message + '\n\n💡 Bạn có muốn BỎ QUA KIỂM TRA 24H để gửi lại ngay cho toàn bộ danh sách này không?');
+                        if (forceSend) {
+                            payload.ignore_cooldown = true;
+                            if (document.getElementById('campaign-check-cooldown')) {
+                                document.getElementById('campaign-check-cooldown').checked = false;
+                            }
+                            var retryRes = await fetch('/start', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+                            var retryData = await retryRes.json();
+                            if (!retryRes.ok) {
+                                alert('Không thể gửi lại: ' + (retryData.message || retryData.status));
+                            } else {
+                                campaignWasRunning = true;
+                                campaignDownloadDone = false;
+                                alert('🚀 Đã bắt đầu chiến dịch gửi SMS!\n- Tổng số khách hàng: ' + retryData.total + '\n- Bỏ qua kiểm tra 24h: BẬT');
+                                updateStatusAndLogs();
+                            }
+                        }
+                    } else if (data.status === 'all_sent') {
+                        var shouldReset = confirm(data.message + '\n\n💡 Bạn có muốn XÓA TRẠNG THÁI "ĐÃ GỬI" để gửi lại toàn bộ danh sách khách hàng này ngay không?');
+                        if (shouldReset) {
+                            var resetOk = await resetCampaignStatusSilent();
+                            if (resetOk) {
+                                payload.ignore_cooldown = true;
+                                if (document.getElementById('campaign-check-cooldown')) {
+                                    document.getElementById('campaign-check-cooldown').checked = false;
+                                }
+                                var res2 = await fetch('/start', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(payload)
+                                });
+                                var data2 = await res2.json();
+                                if (res2.ok) {
+                                    campaignWasRunning = true;
+                                    campaignDownloadDone = false;
+                                    alert('🚀 Đã bắt đầu gửi lại chiến dịch!\n- Tổng số khách hàng: ' + data2.total);
+                                    updateStatusAndLogs();
+                                } else {
+                                    alert('Không thể gửi lại: ' + (data2.message || data2.status));
+                                }
+                            }
+                        }
+                    } else {
+                        alert('Không thể bắt đầu: ' + (data.message || data.status));
+                    }
+                } else {
+                    campaignWasRunning = true;
+                    campaignDownloadDone = false;
+                    alert('🚀 Đã bắt đầu chiến dịch gửi SMS hàng loạt!\n- Tổng số khách hàng: ' + data.total + '\n- Số mẫu tin nhắn xoay vòng: ' + data.templates_count);
+                    updateStatusAndLogs();
+                }
+            } catch (err) {
+                alert('Lỗi kết nối: ' + err);
+            }
+        }
+
+        async function scanWifiDevices() {
+            var statusText = document.getElementById('service-status-text');
+            if (statusText) statusText.textContent = 'SMS Service: Đang quét tìm máy Android trên dải mạng Wi-Fi...';
+            try {
+                var res = await fetch('/api/scan_wifi', { method: 'POST' });
+                var data = await res.json();
+                if (!res.ok) {
+                    alert('Lỗi quét Wi-Fi: ' + (data.message || 'Không thể quét mạng'));
+                    return;
+                }
+                var connected = data.connected || [];
+                if (connected.length > 0) {
+                    alert('✅ ĐÃ TỰ ĐỘNG DÒ TÌM & KẾT NỐI THÀNH CÔNG!\n\n- Tìm thấy ' + connected.length + ' thiết bị trên Wi-Fi:\n  ' + connected.join('\n  ') + '\n\nBây giờ bạn có thể gửi tin nhắn không dây!');
+                } else if (data.ready_count > 0) {
+                    alert('ℹ️ Đã có ' + data.ready_count + ' thiết bị sẵn sàng kết nối.');
+                } else {
+                    alert('⚠️ Chưa tìm thấy thiết bị Android nào mở cổng 5555 trên dải Wi-Fi.\n\n💡 HƯỚNG DẪN 1 LẦN:\n1. Hãy đảm bảo điện thoại và máy tính bắt CHUNG MỘT MẠNG WI-FI.\n2. Cắm cáp USB 1 lần vào máy tính (tool sẽ tự động mở cổng 5555 trên điện thoại), sau đó rút cáp ra và bấm "Dò tìm Wi-Fi" là được ngay!\n3. Hoặc vào Cài đặt điện thoại > Tùy chọn nhà phát triển > Bật "Gỡ lỗi qua Wi-Fi".');
+                }
+                await updateStatusAndLogs();
+                await loadDevices();
+            } catch (err) {
+                alert('Lỗi kết nối khi quét Wi-Fi: ' + err);
+            }
+        }
+
+        async function connectManualIp() {
+            var input = document.getElementById('manual-wifi-ip');
+            var ip = (input ? input.value : '').trim();
+            if (!ip) {
+                alert('Vui lòng nhập IP hoặc IP:PORT của điện thoại (Ví dụ: 10.152.172.162:5555)');
+                return;
+            }
+            try {
+                var res = await fetch('/api/connect_wifi_ip', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ip: ip })
+                });
+                var data = await res.json();
+                if (!res.ok) {
+                    alert('Không thể kết nối tới ' + ip + ':\n' + (data.message || 'Lỗi'));
+                } else {
+                    alert('✅ Kết nối Wi-Fi thành công tới ' + ip + '!');
+                    if (input) input.value = '';
+                    await updateStatusAndLogs();
+                    await loadDevices();
+                }
+            } catch (err) {
+                alert('Lỗi: ' + err);
+            }
+        }
+
+        function downloadHistory() {
+            window.location.href = '/history.csv';
+        }
+
+        var isDownloadingCampaign = false;
+        function downloadCampaignExcel() {
+            if (isDownloadingCampaign) {
+                console.log('Download already in progress, skipping duplicate call.');
+                return;
+            }
+            isDownloadingCampaign = true;
+
+            var btns = document.querySelectorAll('.btn-export');
+            var originalTexts = [];
+            btns.forEach(function(b, i) {
+                originalTexts[i] = b.innerHTML;
+                if (b.textContent.includes('EXCEL')) {
+                    b.innerHTML = '⏳ ĐANG TẢI...';
+                    b.disabled = true;
+                }
+            });
+
+            var link = document.createElement('a');
+            link.href = '/api/download_campaign_excel?t=' + Date.now();
+            link.download = 'dulieu_da_danh_dau.xlsx';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            setTimeout(function() {
+                isDownloadingCampaign = false;
+                btns.forEach(function(b, i) {
+                    if (originalTexts[i]) {
+                        b.innerHTML = originalTexts[i];
+                        b.disabled = false;
+                    }
+                });
+            }, 3000);
+        }
+
+        async function resetCampaignStatus(showConfirm) {
+            if (showConfirm !== false) {
+                if (!confirm('Bạn có chắc chắn muốn xóa toàn bộ đánh dấu "ĐÃ GỬI" trong file dữ liệu Excel để bắt đầu gửi lại từ đầu không?')) {
+                    return false;
+                }
+            }
+            try {
+                var res = await fetch('/api/reset_campaign_status', { method: 'POST' });
+                var data = await res.json();
+                if (res.ok) {
+                    if (showConfirm !== false) {
+                        alert('✅ ' + (data.message || 'Đã xóa trạng thái đã gửi thành công!'));
+                    }
+                    await loadCampaignInfo();
+                    await updateStatusAndLogs();
+                    return true;
+                } else {
+                    alert('❌ Không thể xóa trạng thái: ' + (data.message || 'Thất bại'));
+                    return false;
+                }
+            } catch (e) {
+                alert('Lỗi kết nối: ' + e);
+                return false;
+            }
+        }
+
+        async function resetCampaignStatusSilent() {
+            return await resetCampaignStatus(false);
+        }
+
+        async function openZaloSlot(slot) {
+            var res = await fetch('/api/zalo/open', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slot: slot }) });
+            var data = await res.json();
+            if (!res.ok) alert(data.message || 'Không mở được Zalo');
+        }
+
+        async function resetZaloSlot(slot) {
+            if (!confirm('Xóa phiên đăng nhập Zalo ' + slot + '?')) return;
+            var res = await fetch('/api/zalo/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slot: slot }) });
+            var data = await res.json();
+            alert(data.message || 'Đã xử lý');
+        }
+
+        // --- TAB 2: EXCEL IMPORT & MULTI-TEMPLATE PERSONALIZED CAMPAIGN ---
+
+        async function onExcelFileSelected(event) {
+            var file = event.target.files[0];
+            if (!file) return;
+            var formData = new FormData();
+            formData.append('file', file);
+
+            var label = document.getElementById('excel-filename-label');
+            if (label) label.textContent = 'Đang tải lên ' + file.name + '...';
+
+            try {
+                var res = await fetch('/api/upload_excel', { method: 'POST', body: formData });
+                var data = await res.json();
+                if (!res.ok) {
+                    alert('Lỗi đọc file: ' + (data.message || 'Không đọc được file'));
+                    return;
+                }
+                renderExcelInfo(data);
+                alert('✅ Đã tải file ' + file.name + ' thành công!\n- Số điện thoại hợp lệ: ' + data.total_valid + '\n- Dòng lỗi bỏ qua: ' + data.total_invalid);
+            } catch (err) {
+                alert('Lỗi kết nối khi tải file: ' + err);
+            } finally {
+                event.target.value = '';
+            }
+        }
+
+        function renderExcelInfo(info) {
+            var badge = document.getElementById('excel-status-badge');
+            var label = document.getElementById('excel-filename-label');
+            var summary = document.getElementById('excel-summary-box');
+            var previewContainer = document.getElementById('excel-preview-container');
+            var previewTbody = document.getElementById('excel-preview-tbody');
+
+            if (label) label.textContent = info.filename || 'dulieu.xlsx';
+            if (badge) {
+                if (info.total_valid > 0) {
+                    badge.className = 'conv-badge badge-ok';
+                    badge.textContent = info.total_valid + ' SĐT CHỜ GỬI' + (info.total_sent_success ? (' (' + info.total_sent_success + ' ĐÃ GỬI)') : '');
+                } else if (info.total_sent_success > 0) {
+                    badge.className = 'conv-badge badge-ok';
+                    badge.textContent = 'TẤT CẢ ' + info.total_sent_success + ' SĐT ĐÃ GỬI';
+                } else {
+                    badge.className = 'conv-badge badge-fail';
+                    badge.textContent = 'CHƯA CÓ SĐT HỢP LỆ';
+                }
+            }
+
+            if (summary) {
+                summary.style.display = 'block';
+                var validCount = document.getElementById('excel-valid-count');
+                var sentCount = document.getElementById('excel-sent-count');
+                var invalidCount = document.getElementById('excel-invalid-count');
+                var phoneCol = document.getElementById('excel-phone-col');
+                var nameCol = document.getElementById('excel-name-col');
+                var genderCol = document.getElementById('excel-gender-col');
+                if (validCount) validCount.textContent = info.total_valid || 0;
+                if (sentCount) sentCount.textContent = info.total_sent_success || 0;
+                if (invalidCount) invalidCount.textContent = info.total_invalid || 0;
+                if (phoneCol) phoneCol.textContent = info.phone_col || 'ĐT';
+                if (nameCol) nameCol.textContent = (info.name_col || 'TÊN') + ' (Lấy 1 chữ cuối)';
+                if (genderCol) genderCol.textContent = info.gender_col || 'Tự động';
+            }
+
+            if (previewContainer && previewTbody && info.preview && info.preview.length) {
+                previewContainer.style.display = 'block';
+                previewTbody.innerHTML = info.preview.map(function(r, idx) {
+                    var xungho = (r['GIỚI TÍNH'] === '1' || r['GIỚI TÍNH'] === 1) ? 'Anh' : ((r['GIỚI TÍNH'] === '0' || r['GIỚI TÍNH'] === 0) ? 'Chị' : 'Anh/Chị');
+                    var rawName = (r['TÊN'] || '').trim();
+                    var nameParts = rawName ? rawName.split(' ') : [];
+                    var tenCuoi = r['TEN_CUOI'] || (nameParts.length ? nameParts[nameParts.length - 1] : '');
+                    var displayName = xungho !== 'Anh/Chị' ? (xungho + ' ' + (tenCuoi || '')) : (tenCuoi || 'Anh/Chị');
+                    
+                    return '<tr>' +
+                        '<td>' + (idx + 1) + '</td>' +
+                        '<td><b style="color:var(--primary);">' + escapeHtml(r['ĐT'] || '') + '</b></td>' +
+                        '<td>' + escapeHtml(rawName) + '</td>' +
+                        '<td><b style="color:var(--accent-green);">' + escapeHtml(tenCuoi || 'Quý khách') + '</b></td>' +
+                        '<td>' + escapeHtml(r['GENDER_LABEL'] || 'Tự động') + '</td>' +
+                        '<td><span class="conv-badge badge-ok">' + escapeHtml(displayName.trim()) + '</span></td>' +
+                    '</tr>';
+                }).join('');
+            }
+        }
+
+        async function loadCampaignInfo() {
+            try {
+                var res = await fetch('/api/campaign_info');
+                if (!res.ok) return;
+                var data = await res.json();
+                if (data.has_excel) {
+                    renderExcelInfo(data);
+                }
+                if (data.templates && data.templates.length) {
+                    var uniqueList = [];
+                    data.templates.forEach(function(t) {
+                        var c = (t.content || '').trim();
+                        if (c && !uniqueList.includes(c)) {
+                            uniqueList.push(c);
+                        }
+                    });
+                    if (uniqueList.length > 0) {
+                        campaignTemplatesList = uniqueList.slice(0, 3);
+                    }
+                }
+                renderCampaignTemplates();
+            } catch (e) {
+                console.error("loadCampaignInfo error:", e);
+            }
+        }
+
+        function renderCampaignTemplates() {
+            var container = document.getElementById('campaign-templates-container');
+            if (!container) return;
+            if (!campaignTemplatesList.length) {
+                campaignTemplatesList = ["Chào {name}, chúc anh/chị một ngày tốt lành!"];
+            }
+
+            container.innerHTML = campaignTemplatesList.map(function(tmpl, idx) {
+                return '<div class="template-item-card" data-idx="' + idx + '">' +
+                    '<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">' +
+                        '<span style="font-size:12px; font-weight:700; color:var(--primary);">MẪU TIN NHẮN #' + (idx + 1) + '</span>' +
+                        '<div style="display:flex; gap:4px; flex-wrap:wrap;">' +
+                            '<button type="button" class="btn-ghost" style="padding:1px 6px; font-size:11px;" onclick="insertTagToTemplate(' + idx + ', \'{fullname}\')">+ {fullname} (Họ tên đầy đủ)</button>' +
+                            '<button type="button" class="btn-ghost" style="padding:1px 6px; font-size:11px;" onclick="insertTagToTemplate(' + idx + ', \'{name}\')">+ {name} (Xưng hô + Tên)</button>' +
+                            '<button type="button" class="btn-ghost" style="padding:1px 6px; font-size:11px;" onclick="insertTagToTemplate(' + idx + ', \'{ten}\')">+ {ten} (1 chữ tên)</button>' +
+                            '<button type="button" class="btn-ghost" style="padding:1px 6px; font-size:11px;" onclick="insertTagToTemplate(' + idx + ', \'{xungho}\')">+ {xungho}</button>' +
+                            (campaignTemplatesList.length > 1 ? '<button type="button" class="btn-ghost" style="padding:1px 6px; font-size:11px; color:var(--accent-red);" onclick="removeTemplateItem(' + idx + ')">🗑️ Xóa</button>' : '') +
+                        '</div>' +
+                    '</div>' +
+                    '<textarea id="campaign-tmpl-input-' + idx + '" class="composer-textarea" style="height:60px;" placeholder="Nhập nội dung tin nhắn, dùng {fullname} hoặc {name} để cá nhân hóa..." oninput="onTemplateTextChange(' + idx + ', this.value)">' + escapeHtml(tmpl) + '</textarea>' +
+                '</div>';
+            }).join('');
+
+            updateAllTemplatePreviews();
+        }
+
+        function insertTagToTemplate(idx, tag) {
+            var el = document.getElementById('campaign-tmpl-input-' + idx);
+            if (el) {
+                var start = el.selectionStart || el.value.length;
+                var end = el.selectionEnd || el.value.length;
+                var text = el.value;
+                el.value = text.substring(0, start) + tag + text.substring(end);
+                campaignTemplatesList[idx] = el.value;
+                el.focus();
+                el.setSelectionRange(start + tag.length, start + tag.length);
+            } else {
+                campaignTemplatesList[idx] = (campaignTemplatesList[idx] || '') + ' ' + tag;
+                renderCampaignTemplates();
+            }
+            updateAllTemplatePreviews();
+        }
+
+        function addTemplateItem() {
+            campaignTemplatesList.push("Chào {name}, thông báo ưu đãi dành riêng cho anh/chị trong hôm nay!");
+            renderCampaignTemplates();
+        }
+
+        function removeTemplateItem(idx) {
+            if (campaignTemplatesList.length <= 1) return;
+            campaignTemplatesList.splice(idx, 1);
+            renderCampaignTemplates();
+        }
+
+        function onTemplateTextChange(idx, val) {
+            campaignTemplatesList[idx] = val;
+            updateAllTemplatePreviews();
+        }
+
+        function updateAllTemplatePreviews() {
+            var rawName = (document.getElementById('preview-test-name') ? document.getElementById('preview-test-name').value : '').trim() || 'Nguyễn Văn Tuấn';
+            var genderVal = (document.getElementById('preview-test-gender') ? document.getElementById('preview-test-gender').value : '1');
+            var livePreview = document.getElementById('live-template-preview');
+            if (!livePreview) return;
+            if (!campaignTemplatesList.length) {
+                livePreview.textContent = 'Chưa có mẫu tin nhắn nào.';
+                return;
+            }
+
+            var nameParts = rawName.split(' ');
+            var singleName = nameParts.length ? nameParts[nameParts.length - 1] : '';
+            var firstName = nameParts.length ? nameParts[0] : '';
+            var xungho = genderVal === '1' ? 'Anh' : (genderVal === '0' ? 'Chị' : 'Anh/Chị');
+            
+            var calledName = singleName;
+            if (xungho === 'Anh' && singleName.toLowerCase() === 'anh' && nameParts.length >= 2) {
+                calledName = nameParts[nameParts.length - 2] + ' ' + singleName;
+            } else if (xungho === 'Chị' && singleName.toLowerCase() === 'chị' && nameParts.length >= 2) {
+                calledName = nameParts[nameParts.length - 2] + ' ' + singleName;
+            }
+            var fullDisplayName = genderVal === '1' ? ('Anh ' + calledName) : (genderVal === '0' ? ('Chị ' + calledName) : (singleName || 'Anh/Chị'));
+
+            var sample = campaignTemplatesList[0] || '';
+            var rendered = sample
+                .replace(/\{xungho\}/g, xungho)
+                .replace(/\{ten\}/g, singleName)
+                .replace(/\{tencuoi\}/g, singleName)
+                .replace(/\{ho\}/g, firstName)
+                .replace(/\{name\}/g, fullDisplayName)
+                .replace(/\{fullname\}/g, rawName || fullDisplayName)
+                .replace(/\{hoten\}/g, rawName || fullDisplayName);
+
+            livePreview.innerHTML = '<span style="color:var(--text-muted);font-size:11px;">MẪU #1 SẼ GỬI: (Họ tên đầy đủ: <b style="color:var(--primary);">' + escapeHtml(rawName) + '</b> | Xưng hô + Tên: <b style="color:var(--accent-green);">' + escapeHtml(fullDisplayName) + '</b> | Tên 1 chữ: <b>' + escapeHtml(singleName) + '</b>)</span><br><br>' + escapeHtml(rendered);
+        }
+
+        async function loadCampaignTemplatesFromFolder() {
+            await loadCampaignInfo();
+            alert('✅ Đã nạp lại ' + campaignTemplatesList.length + ' mẫu tin nhắn từ thư mục messages!');
+        }
+
+        async function saveCampaignTemplatesToServer() {
+            var cleanTemplates = campaignTemplatesList.map(function(t) { return t.trim(); }).filter(function(t) { return t.length > 0; });
+            if (!cleanTemplates.length) {
+                alert('Vui lòng nhập ít nhất 1 nội dung tin nhắn trước khi lưu!');
+                return;
+            }
+            try {
+                var res = await fetch('/api/save_campaign_templates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ templates: cleanTemplates })
+                });
+                var data = await res.json();
+                if (res.ok) {
+                    alert('💾 ' + (data.message || 'Đã lưu mẫu tin nhắn thành công!'));
+                    await loadTemplates();
+                } else {
+                    alert('Lỗi khi lưu mẫu tin: ' + (data.message || 'Thất bại'));
+                }
+            } catch (e) {
+                alert('Lỗi kết nối khi lưu: ' + e);
+            }
+        }
+
+
+        // --- TAB 1: MESSAGING CHAT & COMPOSER ---
+
+        async function loadDevices() {
+            try {
+                var res = await fetch('/api/devices');
+                if (!res.ok) return;
+                var data = await res.json();
+                var select = document.getElementById('composer-device');
+                if (!select) return;
+                var currentVal = select.value;
+                select.innerHTML = '<option value="AUTO">Tự động (Khuyên dùng)</option>';
+
+                (data.android_devices || []).forEach(function(d) {
+                    var devSimCount = (d.sims && d.sims.length) ? d.sims.length : 0;
+                    var countLabel = devSimCount > 1 ? ' [' + devSimCount + ' SIM]' : (devSimCount === 1 ? ' [1 SIM]' : '');
+                    var opt = document.createElement('option');
+                    opt.value = d.serial;
+                    opt.textContent = '📱 Android: ' + d.model + countLabel + ' (' + d.serial + ') ' + (d.ready ? '✅ Sẵn sàng' : '⚠️ Chưa sẵn sàng');
+                    select.appendChild(opt);
+
+                    if (d.sims && d.sims.length > 1) {
+                        d.sims.forEach(function(s, idx) {
+                            var simNum = (s.slot_index !== undefined ? s.slot_index + 1 : idx + 1);
+                            var carrier = s.carrier_name || s.display_name || ('SIM ' + simNum);
+                            var subId = s.subscription_id;
+                            var simOpt = document.createElement('option');
+                            simOpt.value = d.serial + ':' + subId;
+                            simOpt.textContent = '  ↳ 📶 SIM ' + simNum + ' (' + carrier + ') - ' + d.model;
+                            select.appendChild(simOpt);
+                        });
+                    }
+                });
+
+                (data.usb_modems || []).forEach(function(m) {
+                    var opt = document.createElement('option');
+                    opt.value = m.port;
+                    opt.textContent = '📶 USB Modem: ' + m.port + ' (📶 ' + m.signal + ')';
+                    select.appendChild(opt);
+                });
+
+                var hasOption = Array.from(select.options).some(function(o) { return o.value === currentVal; });
+                if (hasOption) {
+                    select.value = currentVal;
+                }
+            } catch (e) {
+                console.error("loadDevices error:", e);
+            }
+        }
+
+        async function loadTemplates() {
+            try {
+                var res = await fetch('/api/templates');
+                if (!res.ok) return;
+                var data = await res.json();
+                allTemplates = data.templates || [];
+                var select = document.getElementById('template-select');
+                if (!select) return;
+                select.innerHTML = '<option value="">⚡ Chọn mẫu tin nhắn từ thư mục messages...</option>';
+                allTemplates.forEach(function(t, i) {
+                    var opt = document.createElement('option');
+                    opt.value = i;
+                    var preview = (t && t.content) ? t.content.substring(0, 45) : '';
+                    var name = (t && t.name) ? t.name : 'Mẫu';
+                    opt.textContent = '📄 ' + name + ' - ' + preview + '...';
+                    select.appendChild(opt);
+                });
+            } catch (e) {
+                console.error("loadTemplates error:", e);
+            }
+        }
+
+        function insertTemplate() {
+            var select = document.getElementById('template-select');
+            if (!select) return;
+            var idx = select.value;
+            if (idx === '') return;
+            var t = allTemplates[idx];
+            if (!t) return;
+            var nameInput = document.getElementById('composer-name');
+            var name = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : 'Anh/Chị';
+            var content = (t.content || '').replace(/\{name\}/g, name);
+            var msgInput = document.getElementById('composer-msg');
+            if (msgInput) {
+                msgInput.value = content;
+                updateCharCount();
+            }
+        }
+
+        async function loadConversations() {
+            try {
+                var res = await fetch('/api/conversations');
+                if (!res.ok) return;
+                var data = await res.json();
+                allConversations = data.conversations || [];
+                renderConversationList(allConversations);
+            } catch (e) {
+                console.error("loadConversations error:", e);
+            }
+        }
+
+        function filterConversations() {
+            var searchInput = document.getElementById('conv-search');
+            var query = (searchInput ? searchInput.value : '').toLowerCase().trim();
+            if (!query) {
+                renderConversationList(allConversations);
+                return;
+            }
+            var filtered = allConversations.filter(function(c) {
+                return (c.phone && c.phone.toLowerCase().includes(query)) ||
+                       (c.customer_name && c.customer_name.toLowerCase().includes(query)) ||
+                       (c.message && c.message.toLowerCase().includes(query));
+            });
+            renderConversationList(filtered);
+        }
+
+        function onConvItemClick(el) {
+            var phone = decodeURIComponent(el.getAttribute('data-phone') || '');
+            var name = decodeURIComponent(el.getAttribute('data-name') || '');
+            selectConversation(phone, name);
+        }
+
+        function renderConversationList(list) {
+            var container = document.getElementById('conv-list');
+            if (!container) return;
+            if (!list.length) {
+                container.innerHTML = '<li style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">Chưa có cuộc hội thoại nào.</li>';
+                return;
+            }
+            container.innerHTML = list.map(function(c) {
+                var isActive = currentSelectedPhone && c.phone === currentSelectedPhone;
+                var initial = (c.customer_name && c.customer_name.trim()) ? c.customer_name.trim().charAt(0).toUpperCase() : 'S';
+                var statusBadge = '';
+                if (c.status === 'DELIVERED' || c.delivery_status === 'DELIVERED') {
+                    statusBadge = '<span class="conv-badge badge-ok">Đã giao nhận</span>';
+                } else if (c.status === 'MODEM_ACCEPTED' || c.status === 'ANDROID_ACCEPTED' || c.status === 'SENT' || (c.delivery_status && c.delivery_status.includes('thành công'))) {
+                    statusBadge = '<span class="conv-badge badge-ok">Đã gửi</span>';
+                } else if (c.status === 'FAILED' || c.status === 'ERROR') {
+                    statusBadge = '<span class="conv-badge badge-fail">Gửi lỗi</span>';
+                } else {
+                    statusBadge = '<span class="conv-badge badge-pending">Đang gửi</span>';
+                }
+
+                return '<li class="conv-item ' + (isActive ? 'active' : '') + '" data-phone="' + encodeURIComponent(c.phone || '') + '" data-name="' + encodeURIComponent(c.customer_name || '') + '" onclick="onConvItemClick(this)">' +
+                    '<div class="conv-avatar">' + initial + '</div>' +
+                    '<div class="conv-details">' +
+                        '<div class="conv-top-row">' +
+                            '<span class="conv-name">' + escapeHtml(c.customer_name || 'Khách hàng') + '</span>' +
+                            '<span class="conv-time">' + escapeHtml(c.updated_at ? c.updated_at.substring(11, 16) : '') + '</span>' +
+                        '</div>' +
+                        '<div class="conv-phone">' + escapeHtml(c.phone) + '</div>' +
+                        '<div class="conv-preview">' + escapeHtml(c.message || '') + '</div>' +
+                        '<div class="conv-meta">' +
+                            '<span style="font-size:11px;color:var(--text-muted);">' + (c.total_count || 1) + ' tin nhắn</span>' +
+                            statusBadge +
+                        '</div>' +
+                    '</div>' +
+                '</li>';
+            }).join('');
+        }
+
+        async function selectConversation(phone, name) {
+            // Lưu bản nháp của số điện thoại trước đó
+            var msgInput = document.getElementById('composer-msg');
+            if (currentSelectedPhone && msgInput) {
+                var prevText = msgInput.value.trim();
+                if (prevText) {
+                    localStorage.setItem('sms_draft_' + currentSelectedPhone, prevText);
+                } else {
+                    localStorage.removeItem('sms_draft_' + currentSelectedPhone);
+                }
+            }
+
+            currentSelectedPhone = phone;
+            var phoneInput = document.getElementById('composer-phone');
+            var nameInput = document.getElementById('composer-name');
+            var chatTitle = document.getElementById('chat-title');
+            var chatSubtitle = document.getElementById('chat-subtitle');
+            var chatAvatar = document.getElementById('chat-avatar');
+
+            if (phoneInput) phoneInput.value = phone;
+            if (nameInput) nameInput.value = name;
+            if (chatTitle) chatTitle.textContent = (name || 'Khách hàng') + ' (' + phone + ')';
+            if (chatSubtitle) chatSubtitle.textContent = 'Lịch sử tin nhắn SMS trực tiếp';
+            if (chatAvatar) chatAvatar.textContent = (name && name.trim()) ? name.trim().charAt(0).toUpperCase() : 'S';
+
+            // Khôi phục bản nháp cho cuộc trò chuyện này
+            try {
+                var draft = localStorage.getItem('sms_draft_' + phone) || '';
+                if (msgInput) {
+                    msgInput.value = draft;
+                    updateCharCount();
+                }
+            } catch (e) {}
+
+            renderConversationList(allConversations);
+            await loadChatMessages(phone);
+        }
+
+        function copyMessageText(text) {
+            if (!text) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(function() {
+                    alert('📋 Đã sao chép nội dung tin nhắn!');
+                }).catch(function() { fallbackCopy(text); });
+            } else {
+                fallbackCopy(text);
+            }
+        }
+
+        function fallbackCopy(text) {
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            alert('📋 Đã sao chép nội dung tin nhắn!');
+        }
+
+        function reuseMessageText(text) {
+            if (!text) return;
+            var msgInput = document.getElementById('composer-msg');
+            if (msgInput) {
+                msgInput.value = text;
+                updateCharCount();
+                msgInput.focus();
+            }
+        }
+
+        function saveAsTemplate(text) {
+            if (!text) return;
+            var preview = document.getElementById('save-tpl-preview');
+            if (preview) preview.value = text;
+            var nameInput = document.getElementById('save-tpl-name');
+            if (nameInput) {
+                var firstLine = text.split('\n')[0].substring(0, 30).trim();
+                nameInput.value = firstLine || ('Mẫu tin ' + new Date().toLocaleTimeString('vi-VN'));
+            }
+            var modal = document.getElementById('modal-save-template');
+            if (modal) {
+                modal.style.display = 'flex';
+                if (nameInput) setTimeout(function() { nameInput.focus(); nameInput.select(); }, 80);
+            }
+        }
+
+        async function loadChatMessages(phone) {
+            try {
+                var res = await fetch('/api/messages?phone=' + encodeURIComponent(phone));
+                if (!res.ok) return;
+                var data = await res.json();
+                var container = document.getElementById('chat-history');
+                if (!container) return;
+                var messages = data.messages || [];
+
+                if (!messages.length) {
+                    container.innerHTML = '<div class="empty-chat"><p>Chưa có tin nhắn nào với số <b>' + escapeHtml(phone) + '</b>. Hãy soạn tin bên dưới để bắt đầu gửi.</p></div>';
+                    return;
+                }
+
+                container.innerHTML = messages.map(function(m) {
+                    var statusClass = 'badge-pending';
+                    var statusText = '⏳ ĐANG GỬI...';
+                    if (m.status === 'DELIVERED' || m.delivery_status === 'DELIVERED') {
+                        statusClass = 'badge-ok';
+                        statusText = '✅ ĐÃ GIAO NHẬN';
+                    } else if (m.status === 'ANDROID_ACCEPTED' || m.status === 'MODEM_ACCEPTED' || m.status === 'SENT' || (m.delivery_status && m.delivery_status.includes('thành công'))) {
+                        statusClass = 'badge-ok';
+                        statusText = '✅ ĐÃ GỬI' + (m.delivery_status ? (' (' + m.delivery_status + ')') : '');
+                    } else if (m.status === 'FAILED' || m.status === 'ERROR') {
+                        statusClass = 'badge-fail';
+                        statusText = '❌ GỬI LỖI' + (m.modem_response ? (': ' + m.modem_response) : (m.delivery_status ? (': ' + m.delivery_status) : ''));
+                    }
+
+                    var safeMsg = escapeHtml(m.message || '');
+                    var encodedMsg = encodeURIComponent(m.message || '');
+
+                    return '<div class="bubble-group">' +
+                        '<div class="chat-bubble" style="' + (m.status === 'FAILED' ? 'background:#5c1d1d;border:1px solid rgba(255,61,0,0.5);' : '') + '">' + safeMsg + '</div>' +
+                        '<div class="bubble-meta" style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">' +
+                            '<span>🕒 ' + escapeHtml(m.created_at || m.updated_at || '') + '</span>' +
+                            '<span>• ' + escapeHtml(m.transport || 'SMS') + ' (' + escapeHtml(m.device_id || m.modem_port || '') + ')</span>' +
+                            '<span class="bubble-tag ' + statusClass + '">' + escapeHtml(statusText) + '</span>' +
+                            '<span style="margin-left:auto; display:inline-flex; gap:6px;">' +
+                                '<button type="button" class="btn-ghost" style="padding:2px 7px; font-size:11px; border-radius:4px;" onclick="copyMessageText(decodeURIComponent(\'' + encodedMsg + '\'))" title="Sao chép nội dung">📋 Chép</button>' +
+                                '<button type="button" class="btn-ghost" style="padding:2px 7px; font-size:11px; border-radius:4px;" onclick="reuseMessageText(decodeURIComponent(\'' + encodedMsg + '\'))" title="Dùng lại nội dung này trong ô soạn tin">⚡ Dùng lại</button>' +
+                                '<button type="button" class="btn-ghost" style="padding:2px 7px; font-size:11px; color:var(--primary); border-radius:4px; font-weight:600;" onclick="saveAsTemplate(decodeURIComponent(\'' + encodedMsg + '\'))" title="Lưu nội dung này thành mẫu tin">💾 Lưu mẫu</button>' +
+                            '</span>' +
+                        '</div>' +
+                    '</div>';
+                }).join('');
+
+                container.scrollTop = container.scrollHeight;
+            } catch (e) {
+                console.error("loadChatMessages error:", e);
+            }
+        }
+
+        function openNewComposer() {
+            currentSelectedPhone = null;
+            var phoneInput = document.getElementById('composer-phone');
+            var nameInput = document.getElementById('composer-name');
+            var msgInput = document.getElementById('composer-msg');
+            var chatTitle = document.getElementById('chat-title');
+            var chatSubtitle = document.getElementById('chat-subtitle');
+            var chatAvatar = document.getElementById('chat-avatar');
+            var chatHistory = document.getElementById('chat-history');
+
+            if (phoneInput) phoneInput.value = '';
+            if (nameInput) nameInput.value = '';
+            if (msgInput) msgInput.value = '';
+            if (chatTitle) chatTitle.textContent = 'Soạn tin nhắn mới';
+            if (chatSubtitle) chatSubtitle.textContent = 'Nhập số điện thoại và nội dung bên dưới';
+            if (chatAvatar) chatAvatar.textContent = '✉️';
+            if (chatHistory) {
+                chatHistory.innerHTML = '<div class="empty-chat"><p>Nhập số điện thoại và soạn nội dung bên dưới để gửi tin nhắn mới.</p></div>';
+            }
+            renderConversationList(allConversations);
+            updateCharCount();
+            if (phoneInput) phoneInput.focus();
+        }
+
+        function onComposerPhoneChange() {
+            var phoneInput = document.getElementById('composer-phone');
+            var phone = (phoneInput ? phoneInput.value : '').trim();
+            var chatTitle = document.getElementById('chat-title');
+            if (chatTitle && phone.length >= 9) {
+                chatTitle.textContent = 'Gửi tới: ' + phone;
+            }
+        }
+
+        function onComposerNameChange() {}
+
+        function updateCharCount() {
+            var msgInput = document.getElementById('composer-msg');
+            var msg = msgInput ? msgInput.value : '';
+            var len = msg.length;
+            var isUnicode = /[^\u0000-\u007f]/.test(msg);
+            var partSize = isUnicode ? (len > 70 ? 67 : 70) : (len > 160 ? 153 : 160);
+            var parts = len === 0 ? 1 : Math.ceil(len / partSize);
+            var type = isUnicode ? 'Unicode' : 'GSM';
+            
+            var counter = document.getElementById('char-counter');
+            if (counter) {
+                counter.textContent = 'Độ dài: ' + len + ' ký tự | ' + parts + ' tin (' + type + ')';
+                if (parts > 1) {
+                    counter.classList.add('limit');
+                } else {
+                    counter.classList.remove('limit');
+                }
+            }
+            // Tự động lưu bản nháp (Draft auto-save)
+            try {
+                var draftKey = 'sms_draft_' + (currentSelectedPhone || 'direct');
+                if (msg.trim()) {
+                    localStorage.setItem(draftKey, msg);
+                } else {
+                    localStorage.removeItem(draftKey);
+                }
+            } catch (e) {}
+        }
+
+        function clearComposer() {
+            var msgInput = document.getElementById('composer-msg');
+            if (msgInput) msgInput.value = '';
+            updateCharCount();
+            try {
+                var draftKey = 'sms_draft_' + (currentSelectedPhone || 'direct');
+                localStorage.removeItem(draftKey);
+            } catch (e) {}
+        }
+
+        function saveCurrentComposerMessage() {
+            var msgInput = document.getElementById('composer-msg');
+            var content = msgInput ? msgInput.value.trim() : '';
+            if (!content) {
+                alert('Vui lòng nhập nội dung tin nhắn trước khi lưu!');
+                if (msgInput) msgInput.focus();
+                return;
+            }
+            var preview = document.getElementById('save-tpl-preview');
+            if (preview) preview.value = content;
+            var nameInput = document.getElementById('save-tpl-name');
+            if (nameInput) {
+                var firstLine = content.split('\n')[0].substring(0, 30).trim();
+                nameInput.value = firstLine || ('Mẫu tin ' + new Date().toLocaleTimeString('vi-VN'));
+            }
+            var modal = document.getElementById('modal-save-template');
+            if (modal) {
+                modal.style.display = 'flex';
+                if (nameInput) setTimeout(function() { nameInput.focus(); nameInput.select(); }, 80);
+            }
+        }
+
+        function closeSaveTemplateModal() {
+            var modal = document.getElementById('modal-save-template');
+            if (modal) modal.style.display = 'none';
+        }
+
+        async function confirmSaveTemplate() {
+            var msgInput = document.getElementById('composer-msg');
+            var content = msgInput ? msgInput.value.trim() : '';
+            var nameInput = document.getElementById('save-tpl-name');
+            var name = nameInput ? nameInput.value.trim() : '';
+            if (!content) {
+                alert('Nội dung tin nhắn không được để trống!');
+                return;
+            }
+            try {
+                var res = await fetch('/api/save_template', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: content, name: name })
+                });
+                var data = await res.json();
+                if (res.ok) {
+                    closeSaveTemplateModal();
+                    alert('💾 ' + (data.message || 'Đã lưu mẫu tin nhắn thành công!'));
+                    await loadTemplates();
+                    if (data.name) {
+                        var select = document.getElementById('template-select');
+                        if (select) {
+                            for (var i = 0; i < allTemplates.length; i++) {
+                                if (allTemplates[i].name === data.name) {
+                                    select.value = i;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    alert('Lỗi lưu mẫu tin: ' + (data.message || 'Thất bại'));
+                }
+            } catch (e) {
+                alert('Lỗi kết nối khi lưu: ' + e);
+            }
+        }
+
+        async function deleteCurrentTemplate() {
+            var select = document.getElementById('template-select');
+            if (!select || select.value === '') {
+                alert('Vui lòng chọn mẫu tin nhắn cần xóa từ danh sách trước!');
+                return;
+            }
+            var tpl = allTemplates[select.value];
+            if (!tpl || !tpl.name) {
+                alert('Không tìm thấy thông tin mẫu tin được chọn!');
+                return;
+            }
+            if (!confirm('Bạn có chắc chắn muốn xóa mẫu tin "' + tpl.name + '" khỏi thư mục messages?')) {
+                return;
+            }
+            try {
+                var res = await fetch('/api/delete_template', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: tpl.name })
+                });
+                var data = await res.json();
+                if (res.ok) {
+                    alert('🗑️ ' + (data.message || 'Đã xóa mẫu tin thành công!'));
+                    await loadTemplates();
+                } else {
+                    alert('Lỗi khi xóa mẫu tin: ' + (data.message || 'Thất bại'));
+                }
+            } catch (e) {
+                alert('Lỗi kết nối khi xóa: ' + e);
+            }
+        }
+
+        async function sendDirectMessage() {
+            var phoneInput = document.getElementById('composer-phone');
+            var msgInput = document.getElementById('composer-msg');
+            var nameInput = document.getElementById('composer-name');
+            var devSelect = document.getElementById('composer-device');
+
+            var phone = phoneInput ? phoneInput.value.trim() : '';
+            var message = msgInput ? msgInput.value.trim() : '';
+            var name = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : 'Anh/Chị';
+            var device = devSelect ? devSelect.value : 'AUTO';
+
+            if (!phone) {
+                alert('Vui lòng nhập số điện thoại nhận!');
+                if (phoneInput) phoneInput.focus();
+                return;
+            }
+            if (!message) {
+                alert('Vui lòng nhập nội dung tin nhắn!');
+                if (msgInput) msgInput.focus();
+                return;
+            }
+
+            var sendBtn = document.getElementById('btn-send-sms');
+            if (sendBtn) {
+                sendBtn.disabled = true;
+                sendBtn.innerHTML = '<span>⏳ Đang gửi...</span>';
+            }
+
+            try {
+                var payload = {
+                    phone: phone,
+                    message: message,
+                    name: name,
+                    device_id: device === 'AUTO' ? null : device,
+                    transport: device === 'AUTO' ? 'AUTO' : (device.startsWith('COM') ? 'USB_MODEM' : 'ANDROID')
+                };
+
+                var controller = new AbortController();
+                var timeoutId = setTimeout(function() { controller.abort(); }, 25000);
+
+                var res = await fetch('/api/send_sms', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                var data = await res.json();
+                if (!res.ok) {
+                    alert('Gửi tin thất bại: ' + (data.message || 'Lỗi không xác định'));
+                } else {
+                    // Xóa bản nháp sau khi gửi thành công
+                    try {
+                        localStorage.removeItem('sms_draft_' + phone);
+                        localStorage.removeItem('sms_draft_direct');
+                    } catch (e) {}
+
+                    if (msgInput) msgInput.value = '';
+                    updateCharCount();
+                    currentSelectedPhone = phone;
+                    await loadConversations();
+                    await loadChatMessages(phone);
+
+                    // Tự động thăm dò sau 1.5s, 3.5s, 6s để cập nhật trạng thái thực tế từ điện thoại
+                    setTimeout(function() { if (currentSelectedPhone === phone) loadChatMessages(phone); }, 1500);
+                    setTimeout(function() { if (currentSelectedPhone === phone) loadChatMessages(phone); }, 3500);
+                    setTimeout(function() { if (currentSelectedPhone === phone) loadChatMessages(phone); }, 6000);
+                }
+            } catch (e) {
+                if (e.name === 'AbortError') {
+                    alert('⚠️ Lỗi: Thời gian kết nối quá hạn (Timeout). Vui lòng kiểm tra lại sóng điện thoại hoặc kết nối Wi-Fi.');
+                } else {
+                    alert('Lỗi kết nối khi gửi tin nhắn: ' + e);
+                }
+            } finally {
+                if (sendBtn) {
+                    sendBtn.disabled = false;
+                    sendBtn.innerHTML = '<span>🚀 GỬI TIN NHẮN</span>';
+                }
+            }
+        }
+
+        // --- TAB 3 & REALTIME LOG LOOP ---
+
+        async function updateStatusAndLogs() {
+            try {
+                var res = await fetch('/log');
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                var d = await res.json();
+
+                // 1. Update Service Status Bar
+                var badge = document.getElementById('service-status-badge');
+                var text = document.getElementById('service-status-text');
+
+                var readyAndroid = (d.android_devices || []).filter(function(x) { return x.ready; }).length;
+                var totalAndroid = (d.android_devices || []).length;
+                var usbCount = Object.keys(d.signals || {}).length;
+                var totalReady = readyAndroid + usbCount;
+
+                if (badge && text) {
+                    if (totalReady > 0) {
+                        badge.className = 'status-badge';
+                        text.textContent = 'SMS Service: Sẵn sàng (' + totalReady + ' thiết bị)';
+                    } else if (totalAndroid > 0) {
+                        badge.className = 'status-badge warn';
+                        text.textContent = 'SMS Service: Thiết bị chưa sẵn sàng (Chưa cấp quyền)';
+                    } else {
+                        badge.className = 'status-badge warn';
+                        text.textContent = 'SMS Service: Đang chờ thiết bị (Mở app trên điện thoại hoặc cắm cáp USB)';
+                    }
+                }
+
+                var tagAndroid = document.getElementById('stat-android-tag');
+                if (tagAndroid) {
+                    tagAndroid.textContent = '📱 Android: ' + readyAndroid + '/' + totalAndroid + ' sẵn sàng';
+                    tagAndroid.style.color = readyAndroid > 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+                }
+
+                var tagModem = document.getElementById('stat-modem-tag');
+                if (tagModem) {
+                    tagModem.textContent = '📶 USB Modem: ' + usbCount + ' sẵn sàng';
+                    tagModem.style.color = usbCount > 0 ? 'var(--accent-green)' : 'var(--text-muted)';
+                }
+
+                renderAdbBadge(d.adb || {});
+
+                // 2. Update Campaign Stats
+                var statTotal = document.getElementById('stat-total');
+                if (statTotal) statTotal.textContent = d.sent + '/' + d.total;
+                
+                var statSuccess = document.getElementById('stat-success');
+                if (statSuccess) statSuccess.textContent = d.success;
+
+                var statFail = document.getElementById('stat-fail');
+                if (statFail) statFail.textContent = Math.max(0, d.sent - d.success);
+
+                if (d.running) campaignWasRunning = true;
+                if (campaignWasRunning && !d.running && !campaignDownloadDone) {
+                    campaignDownloadDone = true;
+                    campaignWasRunning = false;
+                    loadCampaignInfo();
+                }
+
+                var pBar = document.getElementById('pbar');
+                var percentLabel = document.getElementById('progress-percent-label');
+                if (pBar) {
+                    if (d.total > 0) {
+                        pBar.max = d.total;
+                        pBar.value = d.sent;
+                        var pct = Math.round((d.sent / d.total) * 100);
+                        if (percentLabel) percentLabel.textContent = pct + '%';
+                    } else {
+                        pBar.value = 0;
+                        if (percentLabel) percentLabel.textContent = '0%';
+                    }
+                }
+
+                // 3. Update Device List Cards in Tab 2
+                var deviceList = document.getElementById('device-list');
+                if (deviceList) {
+                    var usbCards = Object.entries(d.signals || {}).map(function(entry) {
+                        var port = entry[0], sig = entry[1];
+                        return '<div class="modem-card ready"><b>📶 USB MODEM</b><br>Cổng: ' + escapeHtml(port) + '<br>Sóng: 📶 ' + escapeHtml(sig) + '</div>';
+                    });
+                    var androidCards = (d.android_devices || []).map(function(device) {
+                        var simHtml = '';
+                        if (device.sims && device.sims.length > 0) {
+                            var items = device.sims.map(function(s, idx) {
+                                var simNum = (s.slot_index !== undefined ? s.slot_index + 1 : idx + 1);
+                                var carrier = s.carrier_name || s.display_name || ('SIM ' + simNum);
+                                var inService = s.in_service !== false;
+                                return '<div style="margin-top:2px;font-size:12px;">' +
+                                    '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + (inService ? '#00e676' : '#ff5252') + ';margin-right:4px;"></span>' +
+                                    '<b>SIM ' + simNum + ':</b> ' + escapeHtml(carrier) +
+                                    (inService ? ' <span style="color:#00e676;font-size:11px;">(Sẵn sàng)</span>' : ' <span style="color:#ff5252;font-size:11px;">(Mất sóng)</span>') +
+                                    '</div>';
+                            }).join('');
+                            simHtml = '<div style="margin-top:6px;padding-top:6px;border-top:1px dashed rgba(255,255,255,0.2);">' +
+                                '<div style="font-weight:bold;color:#38bdf8;font-size:12px;margin-bottom:2px;">📶 ' + (device.sims.length > 1 ? device.sims.length + ' SIM (Dual SIM)' : '1 SIM') + '</div>' +
+                                items +
+                                '</div>';
+                        } else if (device.ready) {
+                            simHtml = '<div style="margin-top:6px;padding-top:6px;border-top:1px dashed rgba(255,255,255,0.2);">' +
+                                '<div style="margin-top:2px;font-size:12px;">' +
+                                '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#00e676;margin-right:4px;"></span>' +
+                                '<b>SIM 1:</b> SIM hệ thống mặc định <span style="color:#00e676;font-size:11px;">(Sẵn sàng)</span>' +
+                                '</div></div>';
+                        }
+                        return '<div class="modem-card ' + (device.ready ? 'ready' : 'offline') + '">' +
+                            '<b>📱 ANDROID ' + escapeHtml(device.model) + '</b><br>' +
+                            'Serial: ' + escapeHtml(device.serial) + '<br>' +
+                            'Trạng thái: ' + escapeHtml(device.detail) +
+                            simHtml +
+                            '</div>';
+                    });
+                    var allCards = usbCards.concat(androidCards);
+                    if (allCards.length) {
+                        deviceList.innerHTML = allCards.join('');
+                    } else {
+                        deviceList.innerHTML = '<div class="modem-card offline" style="border-color:rgba(255,61,0,0.4);color:#ff8a80;text-align:center;padding:12px;">🔴 Chưa có thiết bị nào kết nối<br><small style="color:var(--text-muted);">Vui lòng cắm cáp USB hoặc bấm QUÉT THIẾT BỊ</small></div>';
+                    }
+                }
+
+                // 4. Update Logs
+                if (d.version !== lastLogVersion) {
+                    lastLogVersion = d.version;
+                    var logBox = document.getElementById('log-box');
+                    if (logBox && d.logs && d.logs.length) {
+                        logBox.textContent = d.logs.join('\n');
+                        logBox.scrollTop = logBox.scrollHeight;
+                    }
+                }
+
+                // Refresh composer device select directly from log data
+                var devSelect = document.getElementById('composer-device');
+                if (devSelect) {
+                    var currentVal = devSelect.value;
+                    var opts = '<option value="AUTO">Tự động (Khuyên dùng)</option>';
+                    (d.android_devices || []).forEach(function(dev) {
+                        var devSimCount = (dev.sims && dev.sims.length) ? dev.sims.length : 0;
+                        var countLabel = devSimCount > 1 ? ' [' + devSimCount + ' SIM]' : (devSimCount === 1 ? ' [1 SIM]' : '');
+                        opts += '<option value="' + escapeHtml(dev.serial) + '">📱 Android: ' + escapeHtml(dev.model) + countLabel + ' (' + escapeHtml(dev.serial) + ') ' + (dev.ready ? '✅ Sẵn sàng' : '⚠️ Chưa sẵn sàng') + '</option>';
+                        if (dev.sims && dev.sims.length > 1) {
+                            dev.sims.forEach(function(s, idx) {
+                                var simNum = (s.slot_index !== undefined ? s.slot_index + 1 : idx + 1);
+                                var carrier = s.carrier_name || s.display_name || ('SIM ' + simNum);
+                                var subId = s.subscription_id;
+                                var val = dev.serial + ':' + subId;
+                                opts += '<option value="' + escapeHtml(val) + '">  ↳ 📶 SIM ' + simNum + ' (' + escapeHtml(carrier) + ') - ' + escapeHtml(dev.model) + '</option>';
+                            });
+                        }
+                    });
+                    Object.entries(d.signals || {}).forEach(function(entry) {
+                        opts += '<option value="' + escapeHtml(entry[0]) + '">📶 USB Modem: ' + escapeHtml(entry[0]) + ' (📶 ' + escapeHtml(entry[1]) + ')</option>';
+                    });
+                    devSelect.innerHTML = opts;
+                    if (Array.from(devSelect.options).some(function(o) { return o.value === currentVal; })) {
+                        devSelect.value = currentVal;
+                    }
+                }
+
+                // Refresh campaign device mode select
+                var campDevSelect = document.getElementById('campaign-device-mode');
+                if (campDevSelect) {
+                    var campCurrentVal = campDevSelect.value;
+                    var campOpts = '<option value="ALL">Tất cả thiết bị sẵn sàng (Chia đều)</option>' +
+                                   '<option value="ANDROID">Chỉ dùng điện thoại Android</option>' +
+                                   '<option value="USB_MODEM">Chỉ dùng USB Modem</option>';
+                    (d.android_devices || []).forEach(function(dev) {
+                        if (dev.ready) {
+                            var devSimCount = (dev.sims && dev.sims.length) ? dev.sims.length : 0;
+                            var countLabel = devSimCount > 1 ? ' [' + devSimCount + ' SIM]' : (devSimCount === 1 ? ' [1 SIM]' : '');
+                            campOpts += '<option value="' + escapeHtml(dev.serial) + '">📱 Riêng máy: ' + escapeHtml(dev.model) + countLabel + '</option>';
+                            if (dev.sims && dev.sims.length > 1) {
+                                dev.sims.forEach(function(s, idx) {
+                                    var simNum = (s.slot_index !== undefined ? s.slot_index + 1 : idx + 1);
+                                    var carrier = s.carrier_name || s.display_name || ('SIM ' + simNum);
+                                    var subId = s.subscription_id;
+                                    var val = dev.serial + ':' + subId;
+                                    campOpts += '<option value="' + escapeHtml(val) + '">  ↳ 📶 Chỉ gửi SIM ' + simNum + ' (' + escapeHtml(carrier) + ') - ' + escapeHtml(dev.model) + '</option>';
+                                });
+                            }
+                        }
+                    });
+                    Object.entries(d.signals || {}).forEach(function(entry) {
+                        campOpts += '<option value="' + escapeHtml(entry[0]) + '">📶 Riêng Modem: ' + escapeHtml(entry[0]) + ' (📶 ' + escapeHtml(entry[1]) + ')</option>';
+                    });
+                    campDevSelect.innerHTML = campOpts;
+                    if (Array.from(campDevSelect.options).some(function(o) { return o.value === campCurrentVal; })) {
+                        campDevSelect.value = campCurrentVal;
+                    }
+                }
+            } catch (e) {
+                console.error("updateStatusAndLogs error:", e);
+                var badgeEl = document.getElementById('service-status-badge');
+                var textEl = document.getElementById('service-status-text');
+                if (badgeEl) badgeEl.className = 'status-badge error';
+                if (textEl) textEl.textContent = 'SMS Service: Mất kết nối máy chủ';
+            }
+        }
+
+        function renderAdbBadge(adb) {
+            var tagAdb = document.getElementById('stat-adb-tag');
+            if (!tagAdb) return;
+            if (adb.available) {
+                var count = (adb.devices || []).length;
+                tagAdb.textContent = count ? 'ADB: Sẵn sàng (' + count + ' máy)' : 'ADB: Sẵn sàng · Chưa có máy';
+                tagAdb.style.color = 'var(--accent-green)';
+                return;
+            }
+            tagAdb.textContent = adb.status === 'unauthorized' ? 'ADB: Cần cấp quyền USB' : 'ADB: Chưa cài';
+            tagAdb.style.color = 'var(--accent-red)';
+        }
+
+        async function refreshAdbBadge() {
+            try {
+                var response = await fetch('/log');
+                if (response.ok) renderAdbBadge((await response.json()).adb || {});
+            } catch (e) {}
+        }
+
+        async function loadHistoryTable() {
+            try {
+                var res = await fetch('/history');
+                if (!res.ok) return;
+                var data = await res.json();
+                var tbody = document.querySelector('#history-table tbody');
+                if (!tbody) return;
+                tbody.innerHTML = (data.rows || []).map(function(r) {
+                    var isOk = (r.status === 'MODEM_ACCEPTED' || r.status === 'DELIVERED' || r.status === 'ANDROID_ACCEPTED' || r.status === 'SENT');
+                    var isPending = (r.status === 'QUEUED' || r.status === 'ANDROID_QUEUED' || !r.status);
+                    var statusClass = isOk ? 'status-ok' : (isPending ? 'status-pending' : 'status-fail');
+                    return '<tr>' +
+                        '<td>' + escapeHtml(r.updated_at) + '</td>' +
+                        '<td><b>' + escapeHtml(r.phone) + '</b></td>' +
+                        '<td>' + escapeHtml(r.customer_name) + '</td>' +
+                        '<td>' + escapeHtml(r.transport) + '</td>' +
+                        '<td>' + escapeHtml(r.device_id || r.modem_port) + '</td>' +
+                        '<td>' + escapeHtml(r.message_ref) + '</td>' +
+                        '<td class="' + statusClass + '">' + escapeHtml(r.status) + '</td>' +
+                        '<td>' + escapeHtml(r.delivery_status) + '</td>' +
+                        '<td>' + escapeHtml(r.message) + '</td>' +
+                        '<td>' + escapeHtml(r.modem_response) + '</td>' +
+                    '</tr>';
+                }).join('');
+            } catch (e) {
+                console.error("loadHistoryTable error:", e);
+            }
+        }
+
+        async function loadAndroidEventsTable() {
+            try {
+                var res = await fetch('/android-events');
+                if (!res.ok) return;
+                var data = await res.json();
+                var tbody = document.querySelector('#android-events-table tbody');
+                if (!tbody) return;
+                tbody.innerHTML = (data.rows || []).map(function(r) {
+                    var statusClass = (r.status === 'FAILED' || r.status === 'ERROR') ? 'status-fail' : 'status-ok';
+                    return '<tr>' +
+                        '<td>' + escapeHtml(r.device_id || r.model) + '</td>' +
+                        '<td>' + escapeHtml(r.job_id) + '</td>' +
+                        '<td>' + escapeHtml(r.latest_stage) + '</td>' +
+                        '<td class="' + statusClass + '">' + escapeHtml(r.status) + '</td>' +
+                        '<td>' + escapeHtml(r.error) + '</td>' +
+                        '<td>' + escapeHtml(r.response) + '</td>' +
+                    '</tr>';
+                }).join('');
+            } catch (e) {
+                console.error("loadAndroidEventsTable error:", e);
+            }
+        }
+
+        // Init
+        loadNetworkInfo();
+        loadTemplates();
+        loadDevices();
+        loadConversations();
+        loadCampaignInfo();
+        updateStatusAndLogs();
+        setInterval(updateStatusAndLogs, 3000);
+        refreshAdbBadge();
+        setInterval(refreshAdbBadge, 3000);
+        setInterval(function() {
+            if (currentSelectedPhone) loadChatMessages(currentSelectedPhone);
+            loadConversations();
+        }, 5000);
+    </script>
+</body>
+</html>

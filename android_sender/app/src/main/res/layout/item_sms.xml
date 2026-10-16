@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:background="?android:attr/selectableItemBackground"
+    android:gravity="center_vertical">
+
+    <TextView
+        android:id="@+id/item_avatar"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:background="#0081CB"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginEnd="12dp"
+        android:text="S" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/item_address"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="#111111"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:text="0912345678" />
+
+            <TextView
+                android:id="@+id/item_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#888888"
+                android:textSize="12sp"
+                android:text="12:30" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/item_body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:textColor="#555555"
+            android:textSize="13sp"
+            android:text="Nội dung tin nhắn..." />
+
+        <TextView
+            android:id="@+id/item_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:background="#E8F5E9"
+            android:textColor="#2E7D32"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:text="ĐÃ GỬI" />
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F4F6F9">
+
+    <!-- Top Sleek Bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#1E293B"
+        android:paddingHorizontal="16dp">
+
+        <TextView
+            android:id="@+id/status_dot"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:background="#00E676"
+            android:layout_marginEnd="10dp" />
+
+        <TextView
+            android:id="@+id/status"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:text="SMS Bridge" />
+
+        <Button
+            android:id="@+id/btn_open_settings"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:background="#334155"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:paddingHorizontal="12dp"
+            android:text="⚙️ Cài đặt" />
+    </LinearLayout>
+
+    <!-- Main Content -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:padding="10dp">
+
+        <!-- Compose / Send Box -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#FFFFFF"
+            android:padding="12dp"
+            android:layout_marginBottom="10dp"
+            android:elevation="2dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="✉️ Soạn tin nhắn nhanh"
+                android:textColor="#0F172A"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="6dp" />
+
+            <EditText
+                android:id="@+id/input_phone"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:hint="Nhập số điện thoại nhận (VD: 0912345678)"
+                android:inputType="phone"
+                android:textSize="13sp"
+                android:padding="8dp"
+                android:background="#F1F5F9"
+                android:layout_marginBottom="6dp" />
+
+            <EditText
+                android:id="@+id/input_message"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:hint="Nhập nội dung tin nhắn..."
+                android:inputType="textMultiLine"
+                android:gravity="top|start"
+                android:textSize="13sp"
+                android:padding="8dp"
+                android:background="#F1F5F9"
+                android:layout_marginBottom="6dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/txt_char_count"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="#64748B"
+                    android:textSize="12sp"
+                    android:text="0 ký tự | 1 SMS" />
+
+                <Button
+                    android:id="@+id/btn_send_sms"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
+                    android:background="#00B0FF"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold"
+                    android:textSize="12sp"
+                    android:text="🚀 GỬI TIN" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Message List Header & Search -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:id="@+id/txt_list_header"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="📋 Hộp thư SMS (0)"
+                android:textColor="#334155"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/input_search"
+                android:layout_width="160dp"
+                android:layout_height="34dp"
+                android:hint="🔍 Tìm kiếm..."
+                android:textSize="12sp"
+                android:padding="6dp"
+                android:background="#FFFFFF" />
+        </LinearLayout>
+
+        <!-- Messages ListView -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:background="#FFFFFF"
+            android:elevation="1dp">
+
+            <ListView
+                android:id="@+id/list_messages"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:divider="#E2E8F0"
+                android:dividerHeight="1dp" />
+
+            <TextView
+                android:id="@+id/txt_empty"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:padding="20dp"
+                android:textColor="#94A3B8"
+                android:textSize="13sp"
+                android:text="Chưa có tin nhắn nào.\nSoạn tin nhắn bên trên để bắt đầu gửi."
+                android:visibility="gone" />
+        </FrameLayout>
+
+    </LinearLayout>
+
+</LinearLayout>

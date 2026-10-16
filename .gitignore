@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+sms/.venv/
+
+# Build artifacts
+build/
+dist/
+release/
+*.spec.bak
+android_sender/.gradle/
+android_sender/.kotlin/
+android_sender/build/
+java_desktop/.gradle/
+java_desktop/build/
+java_desktop/SmsSenderTool.jar
+
+# macOS
+.DS_Store
+._*
+
+# Runtime data & logs
+logs/
+*.log
+*.bak_*
+current_page*.html
+downloaded_current.xlsx
+
+# App local data (không đưa lên git)
+data/*.sqlite3
+history.sqlite3
+sms_system.db
+sms_tool.db
+dulieu.xlsx

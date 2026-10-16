@@ -1,0 +1,6 @@
+Flask
+openpyxl
+pandas
+pyserial
+requests
+pywebview==6.2.1
