@@ -2956,6 +2956,40 @@ def export_history():
     )
 
 
+@app.get("/api/check_update")
+def api_check_update():
+    cache = getattr(api_check_update, "_cache", None)
+    now = time.time()
+    if cache and now - cache[0] < 60:
+        return jsonify(cache[1])
+    result = {"is_repo": False, "behind": 0, "commits": [], "error": None}
+    base = os.path.dirname(os.path.abspath(__file__))
+    try:
+        subprocess.run(
+            ["git", "-C", base, "rev-parse", "--is-inside-work-tree"],
+            capture_output=True, check=True, timeout=15,
+        )
+        result["is_repo"] = True
+        fetch = subprocess.run(
+            ["git", "-C", base, "fetch", "--quiet"],
+            capture_output=True, text=True, timeout=30,
+        )
+        if fetch.returncode != 0:
+            result["error"] = "fetch thất bại (kiểm tra mạng/remote)"
+        else:
+            log = subprocess.run(
+                ["git", "-C", base, "log", "HEAD..@{u}", "--oneline", "-10"],
+                capture_output=True, text=True, timeout=15,
+            )
+            commits = [l.strip() for l in log.stdout.splitlines() if l.strip()]
+            result["behind"] = len(commits)
+            result["commits"] = commits
+    except Exception:
+        result["error"] = "không phải git repo"
+    api_check_update._cache = (now, result)
+    return jsonify(result)
+
+
 @app.post("/api/update")
 def api_update():
     if getattr(sys, "frozen", False):
